@@ -1,0 +1,8 @@
+opam-version: "1"
+maintainer: "Peter Zotov <whitequark@whitequark.org>"
+build: [
+  "ocaml" "pkg/build.ml" "native=%{ocaml-native}%"
+                         "native-dynlink=%{ocaml-native-dynlink}%"
+]
+depends: ["ppx_tools" {>= "0.99"}]
+ocaml-version: [>= "4.02.0"]

@@ -1,0 +1,13 @@
+language: c
+script:
+  - echo "yes" | sudo add-apt-repository ppa:avsm/ppa-opam-experimental
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq ocaml-native-compilers opam
+  - export OPAMYES=1
+  - opam init
+  - eval `opam config -env`
+  # enable on opam 1.2
+  #- opam pin ppx_protobuf .
+  #- opam install --deps-only -q -y ppx_protobuf
+  - opam install ppx_deriving uint ounit
+  - make test
