@@ -44,7 +44,9 @@ _import_ is alpha-quality software. If you have an use case in mind that it does
 Advanced usage
 --------------
 
-It's possible to combine _import_ and [_deriving_][] to derive functions for types that you do not own, e.g.:
+It's possible to combine _import_ and [_deriving_][deriving] to derive functions for types that you do not own, e.g.:
+
+[deriving]: https://github.com/whitequark/ppx_deriving
 
 ``` ocaml
 type longident = [%import: Longident.t] [@@deriving Show]
