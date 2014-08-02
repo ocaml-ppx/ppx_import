@@ -3,7 +3,7 @@ build:
 
 test: build
 	rm _build/src_test/ -rf
-	ocamlbuild -use-ocamlfind -I src src_test/test_ppx_import.byte --
+	ocamlbuild -classic-display -use-ocamlfind src_test/test_ppx_import.byte --
 
 clean:
 	ocamlbuild -clean

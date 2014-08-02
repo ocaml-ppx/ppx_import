@@ -7,7 +7,7 @@ script:
   - opam init
   - eval `opam config -env`
   # enable on opam 1.2
-  #- opam pin ppx_protobuf .
-  #- opam install --deps-only -q -y ppx_protobuf
-  - opam install ppx_deriving uint ounit
+  #- opam pin ppx_import .
+  #- opam install --deps-only -q -y ppx_import
+  - opam install ppx_deriving ounit
   - make test
