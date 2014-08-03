@@ -38,8 +38,7 @@ let locate_sig ~loc lid =
         Sys.file_exists intf) |>
       Cmi_format.read_cmi
     with Not_found ->
-      raise_errorf ~loc "[%%import]: cannot locate module %s. \
-                         Is your compiler new enough?" cu
+      raise_errorf ~loc "[%%import]: cannot locate module %s" cu
   in
   List.fold_left (fun sig_items path_item ->
       let rec loop sig_items =
@@ -74,33 +73,36 @@ let rec longident_of_path path =
   | Path.Papply (lhs, rhs) -> Lapply (longident_of_path lhs, longident_of_path rhs)
 
 let rec core_type_of_type_expr ~subst type_expr =
-  let ptyp_desc =
-    match type_expr.desc with
-    | Tvar None -> Ptyp_any
-    | Tvar (Some var) -> Ptyp_var var
-    | Tarrow (label, lhs, rhs, _) ->
-      Ptyp_arrow (label, core_type_of_type_expr ~subst lhs,
-                         core_type_of_type_expr ~subst rhs)
-    | Ttuple xs ->
-      Ptyp_tuple (List.map (core_type_of_type_expr ~subst) xs)
-    | Tconstr (path, args, _) ->
-      let lid = longident_of_path path in
-      let lid = try List.assoc lid subst with Not_found -> lid in
-      Ptyp_constr ({ txt = lid; loc = !default_loc },
-                   List.map (core_type_of_type_expr ~subst) args)
-    | Tvariant { row_fields; row_closed } ->
-      Ptyp_variant (row_fields |> List.map (fun (label, row_field) ->
-          match row_field with
-          | Rpresent None -> Rtag (label, [], true, [])
-          | Rpresent (Some ttyp) ->
-            Rtag (label, [], false, [core_type_of_type_expr ~subst ttyp])
-          | _ -> assert false),
-        (if row_closed then Closed else Open),
-        None)
-    | _ ->
-      assert false
-  in
-  { ptyp_desc; ptyp_attributes = []; ptyp_loc = !default_loc }
+  match type_expr.desc with
+  | Tvar None -> Typ.any ()
+  | Tvar (Some var) -> Typ.var var
+  | Tarrow (label, lhs, rhs, _) ->
+    Typ.arrow label (core_type_of_type_expr ~subst lhs)
+                    (core_type_of_type_expr ~subst rhs)
+  | Ttuple xs ->
+    Typ.tuple (List.map (core_type_of_type_expr ~subst) xs)
+  | Tconstr (path, args, _) ->
+    let lid  = longident_of_path path in
+    let args = (List.map (core_type_of_type_expr ~subst) args) in
+    begin match List.assoc lid subst with
+    | { ptyp_desc = Ptyp_constr (lid, _) } as typ ->
+      { typ with ptyp_desc = Ptyp_constr (lid, args) }
+    | _ -> assert false
+    | exception Not_found ->
+      Typ.constr { txt = longident_of_path path; loc = !default_loc } args
+    end
+  | Tvariant { row_fields; row_closed } ->
+    let fields =
+      row_fields |> List.map (fun (label, row_field) ->
+        match row_field with
+        | Rpresent None -> Rtag (label, [], true, [])
+        | Rpresent (Some ttyp) ->
+          Rtag (label, [], false, [core_type_of_type_expr ~subst ttyp])
+        | _ -> assert false)
+    in
+    Typ.variant fields Closed None
+  | _ ->
+    assert false
 
 let ptype_decl_of_ttype_decl ?manifest ~subst ptype_name ttype_decl =
   let ptype_params =
@@ -138,6 +140,27 @@ let ptype_decl_of_ttype_decl ?manifest ~subst ptype_name ttype_decl =
     ptype_attributes = ttype_decl.type_attributes;
     ptype_loc        = ttype_decl.type_loc; }
 
+let subst_of_manifest { ptyp_attributes; ptyp_loc } =
+  let rec subst_of_expr expr =
+    match expr with
+    | [%expr [%e? { pexp_desc = Pexp_ident ({ txt = src }) }] :=
+             [%e? { pexp_desc = Pexp_ident (dst); pexp_attributes; pexp_loc }]] ->
+      [src, { ptyp_loc = pexp_loc; ptyp_attributes = pexp_attributes;
+              ptyp_desc = Ptyp_constr (dst, []) }]
+    | [%expr [%e? { pexp_desc = Pexp_ident ({ txt = src }) }] :=
+             [%e? { pexp_desc = Pexp_ident (dst); pexp_attributes; pexp_loc }]; [%e? rest]] ->
+      (src, { ptyp_loc = pexp_loc; ptyp_attributes = pexp_attributes;
+              ptyp_desc = Ptyp_constr (dst, []) }) :: subst_of_expr rest
+    | { pexp_loc } ->
+      raise_errorf ~loc:pexp_loc "Invalid [@with] syntax"
+  in
+  match Ast_convenience.find_attr "with" ptyp_attributes with
+  | None -> []
+  | Some (PStr [{ pstr_desc = Pstr_eval (expr, []) }]) ->
+    subst_of_expr expr
+  | Some _ ->
+    raise_errorf ~loc:ptyp_loc "Invalid [@with] syntax"
+
 let type_declaration mapper type_decl =
   match type_decl with
   | { ptype_attributes; ptype_name; ptype_manifest = Some {
@@ -149,7 +172,9 @@ let type_declaration mapper type_decl =
         { type_decl with ptype_manifest = Some manifest }
       else
         with_default_loc loc (fun () ->
-          let subst = [Lident (Longident.last lid), Lident ptype_name.txt] in
+          let subst = subst_of_manifest manifest in
+          let subst = subst @ [Lident (Longident.last lid),
+                               Typ.constr { txt = Lident ptype_name.txt; loc = ptype_name.loc } []] in
           let ttype_decl = locate_ttype_decl ~loc (locate_sig ~loc lid) lid in
           let ptype_decl = ptype_decl_of_ttype_decl ~manifest ~subst ptype_name ttype_decl in
           { ptype_decl with ptype_attributes })

@@ -21,6 +21,15 @@ let test_deriving ctxt =
   assert_equal ~printer:(fun x -> x)
                "Stuff.A2 (\"a\")" (show_a' (A2 "a"))
 
+type longident = [%import: Longident.t] [@@deriving Show]
+
+type package_type =
+[%import: Parsetree.package_type
+          [@with core_type    := Parsetree.core_type [@printer Pprintast.core_type];
+                 Asttypes.loc := Asttypes.loc [@polyprinter fun pp fmt x -> pp fmt x.Asttypes.txt];
+                 Longident.t  := Longident.t [@printer pp_longident]]]
+[@@deriving Show]
+
 let suite = "Test ppx_import" >::: [
     "test_constr"   >:: test_constr;
     "test_deriving" >:: test_deriving;

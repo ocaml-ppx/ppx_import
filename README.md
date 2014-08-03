@@ -37,12 +37,7 @@ type a = [%import: Stuff.foo]
 type a = Stuff.foo = A1 | A2 of string
 ```
 
-### More?
-
-_import_ is alpha-quality software. If you have an use case in mind that it does not cover, please [open an issue](https://github.com/whitequark/ppx_import/issues/new).
-
-Advanced usage
---------------
+### Combining with [@@deriving]
 
 It's possible to combine _import_ and [_deriving_][deriving] to derive functions for types that you do not own, e.g.:
 
@@ -54,6 +49,25 @@ let () =
   print_endline (show_longident (Longident.parse "Foo.Bar.baz"))
 (* Longident.Ldot (Longident.Ldot (Longident.Lident ("Foo"), "Bar"), "baz") *)
 ```
+
+### [@with] replacements
+
+It is possible to syntactically replace a type with another while importing a definition. This can be used to import only a few types from a group, or to attach attributes to selected referenced types.
+
+For example, this snippet imports a single type from Parsetree and specifies a custom pretty-printer for _deriving Show_.
+
+``` ocaml
+type package_type =
+[%import: Parsetree.package_type
+          [@with core_type    := Parsetree.core_type [@printer Pprintast.core_type];
+                 Asttypes.loc := Asttypes.loc [@polyprinter fun pp fmt x -> pp fmt x.Asttypes.txt];
+                 Longident.t  := Longident.t [@printer pp_longident]]]
+[@@deriving Show]
+```
+
+### More?
+
+_import_ is alpha-quality software. If you have an use case in mind that it does not cover, please [open an issue](https://github.com/whitequark/ppx_import/issues/new).
 
 Known issues
 ------------
