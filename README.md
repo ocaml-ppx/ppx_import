@@ -18,14 +18,9 @@ In order to use _import_, require the package `ppx_import`.
 Syntax
 ------
 
-Assume the following interface `stuff.mli` exists:
-
-``` ocaml
-type foo = A1 | A2 of string
-and  bar = foo list
-```
-
 ### Single declarations
+
+For example:
 
 ``` ocaml
 # type loc = [%import: Location.t];;
