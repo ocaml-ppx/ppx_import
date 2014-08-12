@@ -167,7 +167,7 @@ let type_declaration mapper type_decl =
         ptyp_desc = Ptyp_extension ({ txt = "import"; loc }, payload) } } ->
     begin match payload with
     | PTyp ({ ptyp_desc = Ptyp_constr ({ txt = lid; loc }, []) } as manifest) ->
-      if !Ast_mapper.tool_name = "ocamldep" then
+      if Ast_mapper.tool_name () = "ocamldep" then
         (* Just put it as manifest *)
         { type_decl with ptype_manifest = Some manifest }
       else
