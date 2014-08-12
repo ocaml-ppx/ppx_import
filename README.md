@@ -70,13 +70,6 @@ For module types, the replacements are specified using the standard `with` const
 
 If you have an use case in mind that _ppx_import_ does not cover (in particular, object-oriented features are not implemented), please [open an issue](https://github.com/whitequark/ppx_import/issues/new).
 
-Known issues
-------------
-
-You need a [patched compiler](https://github.com/ocaml/ocaml/pull/85); try `opam switch 4.03.0+pr85`.
-
-Doesn't work in [utop](https://github.com/diml/utop) (yet).
-
 License
 -------
 
