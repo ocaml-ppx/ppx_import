@@ -55,16 +55,28 @@ let locate_sig ~loc lid =
       loop sig_items)
     cmi.Cmi_format.cmi_sign path
 
-let locate_ttype_decl ~loc sig_items lid =
+let locate_tsig_item f ~loc sig_items lid =
   let elem = Longident.last lid in
   let rec loop sig_items =
     match sig_items with
-    | Sig_type ({ name }, type_decl, _) :: _ when name = elem -> type_decl
-    | _ :: sig_items -> loop sig_items
+    | item :: sig_items ->
+      (match f elem item with Some x -> x | None -> loop sig_items)
     | [] -> raise_errorf ~loc "[%%import]: cannot locate type %s"
                               (String.concat "." (Longident.flatten lid))
   in
   loop sig_items
+
+let locate_ttype_decl =
+  locate_tsig_item (fun elem ->
+    function
+    | Sig_type ({ name }, type_decl, _) when name = elem -> Some type_decl
+    | _ -> None)
+
+let locate_tmodtype_decl =
+  locate_tsig_item (fun elem ->
+    function
+    | Sig_modtype ({ name }, type_decl) when name = elem -> Some type_decl
+    | _ -> None)
 
 let rec longident_of_path path =
   match path with
@@ -182,7 +194,59 @@ let type_declaration mapper type_decl =
     end
   | _ -> default_mapper.type_declaration mapper type_decl
 
+let rec psig_of_tsig ~subst ?(trec=[]) tsig =
+  match tsig with
+  | Sig_type ({ name }, ttype_decl, rec_flag) :: rest ->
+    let ptype_decl = ptype_decl_of_ttype_decl ~subst (Location.mknoloc name) ttype_decl in
+    begin match rec_flag with
+    | Trec_not ->
+      { psig_desc = Psig_type [ptype_decl]; psig_loc = Location.none } ::
+      psig_of_tsig ~subst rest
+    | Trec_first | Trec_next ->
+      psig_of_tsig ~subst ~trec:(ptype_decl :: trec) rest
+    end
+  | _ when trec <> [] ->
+    { psig_desc = Psig_type trec; psig_loc = Location.none } ::
+    psig_of_tsig ~subst tsig
+  | Sig_value ({ name }, { val_type; val_kind; val_loc; val_attributes }) :: rest ->
+    let pval_prim =
+      match val_kind with
+      | Val_reg -> []
+      | Val_prim p -> Primitive.description_list p
+      | _ -> assert false
+    in
+    { psig_desc = Psig_value {
+        pval_name = Location.mknoloc name; pval_loc = val_loc;
+        pval_attributes = val_attributes;
+        pval_prim; pval_type = core_type_of_type_expr ~subst val_type; };
+      psig_loc = val_loc } ::
+    psig_of_tsig ~subst rest
+  | [] -> []
+  | _ -> assert false
+
+let module_type mapper modtype_decl =
+  match modtype_decl with
+  | { pmty_attributes; pmty_desc = Pmty_extension ({ txt = "import"; loc }, payload) } ->
+    begin match payload with
+    | PTyp ({ ptyp_desc = Ptyp_package({ txt = lid; loc } as alias, subst) }) ->
+      if Ast_mapper.tool_name () = "ocamldep" then
+        (* Just put it as alias *)
+        { modtype_decl with pmty_desc = Pmty_alias alias }
+      else
+        with_default_loc loc (fun () ->
+          match locate_tmodtype_decl ~loc (locate_sig ~loc lid) lid with
+          | { mtd_type = Some (Mty_signature tsig) } ->
+            let subst = List.map (fun ({ txt; }, typ) -> txt, typ) subst in
+            let psig  = psig_of_tsig ~subst tsig in
+            { modtype_decl with pmty_desc = Pmty_signature psig }
+          | { mtd_type = None } ->
+            raise_errorf ~loc "Imported module is abstract"
+          | _ ->
+            raise_errorf ~loc "Imported module is indirectly defined")
+    | _ -> raise_errorf ~loc "Invalid [%%import] syntax"
+    end
+  | _ -> default_mapper.module_type mapper modtype_decl
+
 let () =
   Ast_mapper.register "ppx_import" (fun argv ->
-    { default_mapper with
-      type_declaration; })
+    { default_mapper with type_declaration; module_type; })

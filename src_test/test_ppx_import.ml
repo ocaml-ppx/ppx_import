@@ -30,6 +30,8 @@ type package_type =
                  Longident.t  := Longident.t [@printer pp_longident]]]
 [@@deriving Show]
 
+module type Hashable = [%import: (module Hashtbl.HashedType)]
+
 let suite = "Test ppx_import" >::: [
     "test_constr"   >:: test_constr;
     "test_deriving" >:: test_deriving;

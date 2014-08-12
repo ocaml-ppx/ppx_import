@@ -37,6 +37,22 @@ type a = [%import: Stuff.foo]
 type a = Stuff.foo = A1 | A2 of string
 ```
 
+It works for module types, too:
+
+``` ocaml
+module type A = [%import: (module Hashtbl.HashedType)]
+```
+
+``` ocaml
+module type A = sig
+  type t
+  val equal : t -> t -> bool
+  val hash : t -> int
+end
+```
+
+It also works for importing items from your own .mli file.
+
 ### Combining with [@@deriving]
 
 It's possible to combine _import_ and [_deriving_][deriving] to derive functions for types that you do not own, e.g.:
@@ -65,9 +81,11 @@ type package_type =
 [@@deriving Show]
 ```
 
+For module types, the replacements are specified using the standard `with` construct. However, the replacement is still syntactic.
+
 ### More?
 
-_import_ is alpha-quality software. If you have an use case in mind that it does not cover, please [open an issue](https://github.com/whitequark/ppx_import/issues/new).
+If you have an use case in mind that _ppx_import_ does not cover (in particular, object-oriented features are not implemented), please [open an issue](https://github.com/whitequark/ppx_import/issues/new).
 
 Known issues
 ------------
