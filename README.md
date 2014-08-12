@@ -27,31 +27,14 @@ and  bar = foo list
 
 ### Single declarations
 
-The following two implementations are equivalent:
-
 ``` ocaml
-type a = [%import: Stuff.foo]
+# type loc = [%import: Location.t];;
+type loc = Location.t = { loc_start : Lexing.position; loc_end : Lexing.position; loc_ghost : bool; }
+# module type Hashable = [%import: (module Hashtbl.HashedType)];;
+module type Hashable = sig type t val equal : t -> t -> bool val hash : t -> int end
 ```
 
-``` ocaml
-type a = Stuff.foo = A1 | A2 of string
-```
-
-It works for module types, too:
-
-``` ocaml
-module type A = [%import: (module Hashtbl.HashedType)]
-```
-
-``` ocaml
-module type A = sig
-  type t
-  val equal : t -> t -> bool
-  val hash : t -> int
-end
-```
-
-It also works for importing items from your own .mli file.
+It is also possible to importing items from your own .mli file.
 
 ### Combining with [@@deriving]
 
