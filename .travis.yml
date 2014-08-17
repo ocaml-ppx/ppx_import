@@ -7,5 +7,4 @@ script:
   - opam init
   - eval `opam config -env`
   - opam pin ppx_import .
-  - opam install --deps-only -q -y ppx_import
-  - make test
+  - opam install -y -d -t ppx_import
