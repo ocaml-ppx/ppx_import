@@ -6,8 +6,6 @@ script:
   - export OPAMYES=1
   - opam init
   - eval `opam config -env`
-  # enable on opam 1.2
-  #- opam pin ppx_import .
-  #- opam install --deps-only -q -y ppx_import
-  - opam install ppx_deriving ounit
+  - opam pin ppx_import .
+  - opam install --deps-only -q -y ppx_import
   - make test
