@@ -3,6 +3,8 @@
 
 _import_ is a syntax extension that allows to pull in types or signatures from other compiled interface files.
 
+Sponsored by [Evil Martians](http://evilmartians.com).
+
 Installation
 ------------
 
