@@ -46,6 +46,8 @@ let () =
 (* Longident.Ldot (Longident.Ldot (Longident.Lident ("Foo"), "Bar"), "baz") *)
 ```
 
+Note that you need to require _import_ before _deriving_, as otherwise _deriving_ will not be able to observe the complete type.
+
 ### [@with] replacements
 
 It is possible to syntactically replace a type with another while importing a definition. This can be used to import only a few types from a group, or to attach attributes to selected referenced types.
