@@ -31,7 +31,7 @@ type loc = Location.t = { loc_start : Lexing.position; loc_end : Lexing.position
 module type Hashable = sig type t val equal : t -> t -> bool val hash : t -> int end
 ```
 
-It is also possible to importing items from your own .mli file.
+It is also possible to import items from your own .mli file.
 
 ### Combining with [@@deriving]
 
@@ -67,9 +67,9 @@ For module types, the replacements are specified using the standard `with` const
 
 ### More?
 
-If you have an use case in mind that _ppx_import_ does not cover (in particular, object-oriented features are not implemented), please [open an issue](https://github.com/whitequark/ppx_import/issues/new).
+If you have a use case in mind that _ppx_import_ does not cover (in particular, object-oriented features are not implemented), please [open an issue](https://github.com/whitequark/ppx_import/issues/new).
 
 License
 -------
 
-[MIT](LICENSE.txt)
+_import_ is distributed under the terms of [MIT license](LICENSE.txt).
