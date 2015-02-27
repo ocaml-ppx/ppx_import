@@ -46,6 +46,9 @@ let locate_sig ~loc lid =
         | Sig_module ({ name }, { md_type = Mty_signature sig_items }, _) :: _
               when name = path_item ->
           sig_items
+        | Sig_modtype ({ name }, { mtd_type = Some (Mty_signature sig_items) }) :: _
+              when name = path_item ->
+          sig_items
         | _ :: sig_items ->
           loop sig_items
         | [] ->

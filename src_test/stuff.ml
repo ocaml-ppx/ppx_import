@@ -7,3 +7,7 @@ type b = {
 type c = [ `A | `B | `C of string ]
 type d = Int64.t
 type e = string * int
+
+module type S = sig
+  type f = int
+end
