@@ -18,6 +18,6 @@ depends: [
   "ppx_tools"    {>= "0.99.1"}
   "ocamlfind"    {build}
   "ounit"        {test}
-  "ppx_deriving" {test}
+  "ppx_deriving" {test & >= "2.0"}
 ]
 available: [ ocaml-version >= "4.02.0" ]

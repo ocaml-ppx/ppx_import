@@ -15,20 +15,20 @@ let test_constr ctxt =
   ignore (("a", 1) : e);
 ;;
 
-type a' = [%import: Stuff.a] [@@deriving Show]
+type a' = [%import: Stuff.a] [@@deriving show]
 
 let test_deriving ctxt =
   assert_equal ~printer:(fun x -> x)
-               "Stuff.A2 (\"a\")" (show_a' (A2 "a"))
+               "(Stuff.A2 \"a\")" (show_a' (A2 "a"))
 
-type longident = [%import: Longident.t] [@@deriving Show]
+type longident = [%import: Longident.t] [@@deriving show]
 
 type package_type =
 [%import: Parsetree.package_type
           [@with core_type    := Parsetree.core_type [@printer Pprintast.core_type];
                  Asttypes.loc := Asttypes.loc [@polyprinter fun pp fmt x -> pp fmt x.Asttypes.txt];
                  Longident.t  := Longident.t [@printer pp_longident]]]
-[@@deriving Show]
+[@@deriving show]
 
 module type Hashable = [%import: (module Hashtbl.HashedType)]
 
