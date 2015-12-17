@@ -90,7 +90,11 @@ let rec longident_of_path path =
 let rec core_type_of_type_expr ~subst type_expr =
   match type_expr.desc with
   | Tvar None -> Typ.any ()
-  | Tvar (Some var) -> Typ.var var
+  | Tvar (Some var) ->
+    begin match List.assoc (`Var var) subst with
+    | typ -> typ
+    | exception Not_found -> Typ.var var
+    end
   | Tarrow (label, lhs, rhs, _) ->
     Typ.arrow label (core_type_of_type_expr ~subst lhs)
                     (core_type_of_type_expr ~subst rhs)
@@ -99,7 +103,7 @@ let rec core_type_of_type_expr ~subst type_expr =
   | Tconstr (path, args, _) ->
     let lid  = longident_of_path path in
     let args = (List.map (core_type_of_type_expr ~subst) args) in
-    begin match List.assoc lid subst with
+    begin match List.assoc (`Lid lid) subst with
     | { ptyp_desc = Ptyp_constr (lid, _) } as typ ->
       { typ with ptyp_desc = Ptyp_constr (lid, args) }
     | _ -> assert false
@@ -120,6 +124,25 @@ let rec core_type_of_type_expr ~subst type_expr =
     assert false
 
 let ptype_decl_of_ttype_decl ?manifest ~subst ptype_name ttype_decl =
+  let subst =
+    match manifest with
+    | Some { ptyp_desc = Ptyp_constr (_, ptype_args); ptyp_loc } ->
+      begin try
+        subst @ (List.map2 (fun tparam pparam ->
+            match tparam with
+            | { desc = Tvar (Some var) } -> [`Var var, pparam]
+            | { desc = Tvar None }       -> []
+            | _ -> assert false)
+          ttype_decl.type_params ptype_args
+        |> List.concat)
+      with Invalid_argument "List.map2" ->
+        raise_errorf ~loc:ptyp_loc "Imported type has %d parameter(s), but %d are passed"
+                                   (List.length ttype_decl.type_params)
+                                   (List.length ptype_args)
+      end
+    | None -> []
+    | _ -> assert false
+  in
   let ptype_params =
     List.map2 (fun param variance ->
         core_type_of_type_expr ~subst param,
@@ -163,12 +186,12 @@ let subst_of_manifest { ptyp_attributes; ptyp_loc } =
     match expr with
     | [%expr [%e? { pexp_desc = Pexp_ident ({ txt = src }) }] :=
              [%e? { pexp_desc = Pexp_ident (dst); pexp_attributes; pexp_loc }]] ->
-      [src, { ptyp_loc = pexp_loc; ptyp_attributes = pexp_attributes;
-              ptyp_desc = Ptyp_constr (dst, []) }]
+      [`Lid src, { ptyp_loc = pexp_loc; ptyp_attributes = pexp_attributes;
+                   ptyp_desc = Ptyp_constr (dst, []) }]
     | [%expr [%e? { pexp_desc = Pexp_ident ({ txt = src }) }] :=
              [%e? { pexp_desc = Pexp_ident (dst); pexp_attributes; pexp_loc }]; [%e? rest]] ->
-      (src, { ptyp_loc = pexp_loc; ptyp_attributes = pexp_attributes;
-              ptyp_desc = Ptyp_constr (dst, []) }) :: subst_of_expr rest
+      (`Lid src, { ptyp_loc = pexp_loc; ptyp_attributes = pexp_attributes;
+                   ptyp_desc = Ptyp_constr (dst, []) }) :: subst_of_expr rest
     | { pexp_loc } ->
       raise_errorf ~loc:pexp_loc "Invalid [@with] syntax"
   in
@@ -184,15 +207,17 @@ let type_declaration mapper type_decl =
   | { ptype_attributes; ptype_name; ptype_manifest = Some {
         ptyp_desc = Ptyp_extension ({ txt = "import"; loc }, payload) } } ->
     begin match payload with
-    | PTyp ({ ptyp_desc = Ptyp_constr ({ txt = lid; loc }, []) } as manifest) ->
+    | PTyp ({ ptyp_desc = Ptyp_constr ({ txt = lid; loc }, _) } as manifest) ->
       if Ast_mapper.tool_name () = "ocamldep" then
         (* Just put it as manifest *)
         { type_decl with ptype_manifest = Some manifest }
       else
         with_default_loc loc (fun () ->
           let subst = subst_of_manifest manifest in
-          let subst = subst @ [Lident (Longident.last lid),
-                               Typ.constr { txt = Lident ptype_name.txt; loc = ptype_name.loc } []] in
+          let subst = subst @ [
+            `Lid (Lident (Longident.last lid)),
+              Typ.constr { txt = Lident ptype_name.txt; loc = ptype_name.loc } []
+          ] in
           let ttype_decl = locate_ttype_decl ~loc (locate_sig ~loc lid) lid in
           let ptype_decl = ptype_decl_of_ttype_decl ~manifest ~subst ptype_name ttype_decl in
           { ptype_decl with ptype_attributes })
@@ -242,7 +267,7 @@ let module_type mapper modtype_decl =
         with_default_loc loc (fun () ->
           match locate_tmodtype_decl ~loc (locate_sig ~loc lid) lid with
           | { mtd_type = Some (Mty_signature tsig) } ->
-            let subst = List.map (fun ({ txt; }, typ) -> txt, typ) subst in
+            let subst = List.map (fun ({ txt; }, typ) -> `Lid txt, typ) subst in
             let psig  = psig_of_tsig ~subst tsig in
             { modtype_decl with pmty_desc = Pmty_signature psig }
           | { mtd_type = None } ->

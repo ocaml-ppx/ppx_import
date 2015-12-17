@@ -6,6 +6,8 @@ type c = [%import: Stuff.c]
 type d = [%import: Stuff.d]
 type e = [%import: Stuff.e]
 type f = [%import: Stuff.S.f]
+type 'a g = [%import: 'a Stuff.g]
+type 'b g' = [%import: 'b Stuff.g]
 
 let test_constr ctxt =
   ignore ([A1; A2 "a"]);

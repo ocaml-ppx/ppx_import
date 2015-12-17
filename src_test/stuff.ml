@@ -11,3 +11,5 @@ type e = string * int
 module type S = sig
   type f = int
 end
+
+type 'a g = Foo of 'a
