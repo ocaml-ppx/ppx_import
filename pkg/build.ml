@@ -3,7 +3,7 @@
 #use "topkg.ml"
 
 let () =
-  Pkg.describe "ppx_import" ~builder:`OCamlbuild [
+  Pkg.describe "ppx_import" ~builder:(`OCamlbuild []) [
     Pkg.lib "pkg/META";
     Pkg.libexec ~auto:true "src/ppx_import";
     Pkg.doc "README.md";
