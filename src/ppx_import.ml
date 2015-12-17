@@ -123,7 +123,10 @@ let ptype_decl_of_ttype_decl ?manifest ~subst ptype_name ttype_decl =
   let ptype_params =
     List.map2 (fun param variance ->
         core_type_of_type_expr ~subst param,
-        Invariant (* TODO *))
+        (* The equivalent of not specifying the variance explicitly.
+           Since the very purpose of ppx_import is to include the full definition,
+           it should always be sufficient to rely on the inferencer to deduce variance. *)
+        Invariant)
       ttype_decl.type_params ttype_decl.type_variance
   and ptype_kind =
     match ttype_decl.type_kind with
