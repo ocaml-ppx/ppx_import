@@ -46,7 +46,7 @@ module type Exts = sig
   (** [module_library] is [(interface_opt @ library)]. *)
 
   val exe : ext list
-  (** [exe] is the extension for C libraries. This is determined from
+  (** [exe] is the extension for executables. This is determined from
       [ocamlc -config]. *)
 
   val exts : string list -> ext list
@@ -292,10 +292,17 @@ module Pkg : Pkg = struct
     let no_build = [ ".cmti"; ".cmt" ] in
     let install = Buffer.create 1871 in
     let exec = Buffer.create 1871 in
-    let file_to_str (n, ext) = str "%s%s" n (ext_to_string ext) in
+    let file_to_str ?(target = false) (n, ext) =
+      let ext = match ext with
+      (* Work around https://github.com/ocaml/ocamlbuild/issues/6 *)
+      | `Exe when target -> `Ext ""
+      | _ -> ext
+      in
+      str "%s%s" n (ext_to_string ext)
+    in
     let rec add_mvs current = function
     | (field, (src, dst)) :: mvs when field = current ->
-        let src = file_to_str src in
+        let src = file_to_str ~target:true src in
         let dst = file_to_str dst in
         if List.exists (Filename.check_suffix src) no_build then
           Buffer.add_string install (str "\n  \"?%s/%s\" {\"%s\"}" bdir src dst)
