@@ -1,3 +1,8 @@
+#if OCAML_VERSION < (4, 03, 0)
+#define Cstr_tuple(x) x
+#define Pcstr_tuple(x) x
+#endif
+
 open Longident
 open Asttypes
 open Parsetree
@@ -152,20 +157,32 @@ let ptype_decl_of_ttype_decl ?manifest ~subst ptype_name ttype_decl =
         Invariant)
       ttype_decl.type_params ttype_decl.type_variance
   and ptype_kind =
-    match ttype_decl.type_kind with
-    | Type_abstract -> Ptype_abstract
-    | Type_open -> Ptype_open
-    | Type_record (labels, _) ->
-      Ptype_record (labels |> List.map (fun ld ->
+    let map_labels =
+      List.map (fun ld ->
         { pld_name       = { txt = ld.ld_id.name; loc = ld.ld_loc };
           pld_mutable    = ld.ld_mutable;
           pld_type       = core_type_of_type_expr ~subst ld.ld_type;
           pld_loc        = ld.ld_loc;
-          pld_attributes = ld.ld_attributes; }))
+          pld_attributes = ld.ld_attributes; })
+    in
+    match ttype_decl.type_kind with
+    | Type_abstract -> Ptype_abstract
+    | Type_open -> Ptype_open
+    | Type_record (labels, _) ->
+      Ptype_record (map_labels labels)
     | Type_variant constrs ->
+      let map_args =
+        function
+        | Cstr_tuple(args)    ->
+          Pcstr_tuple(List.map (core_type_of_type_expr ~subst) args)
+#if OCAML_VERSION >= (4, 03, 0)
+        | Cstr_record(labels) ->
+          Pcstr_record(map_labels labels)
+#endif
+      in
       Ptype_variant (constrs |> List.map (fun cd ->
         { pcd_name       = { txt = cd.cd_id.name; loc = cd.cd_loc };
-          pcd_args       = List.map (core_type_of_type_expr ~subst) cd.cd_args;
+          pcd_args       = map_args cd.cd_args;
           pcd_res        = (match cd.cd_res with Some x -> Some (core_type_of_type_expr ~subst x)
                                                | None -> None);
           pcd_loc        = cd.cd_loc;
@@ -227,23 +244,39 @@ let type_declaration mapper type_decl =
 
 let rec psig_of_tsig ~subst ?(trec=[]) tsig =
   match tsig with
+  | (Sig_type (_, _, Trec_first) | _) :: _ when trec <> [] ->
+#if OCAML_VERSION < (4, 03, 0)
+    let psig_desc = Psig_type trec in
+#else
+    let psig_desc = Psig_type(Recursive, trec) in
+#endif
+    { psig_desc; psig_loc = Location.none } :: psig_of_tsig ~subst tsig
   | Sig_type ({ name }, ttype_decl, rec_flag) :: rest ->
     let ptype_decl = ptype_decl_of_ttype_decl ~subst (Location.mknoloc name) ttype_decl in
     begin match rec_flag with
     | Trec_not ->
-      { psig_desc = Psig_type [ptype_decl]; psig_loc = Location.none } ::
-      psig_of_tsig ~subst rest
+#if OCAML_VERSION < (4, 03, 0)
+      let psig_desc = Psig_type [ptype_decl] in
+#else
+      let psig_desc = Psig_type(Nonrecursive, [ptype_decl]) in
+#endif
+      { psig_desc; psig_loc = Location.none } :: psig_of_tsig ~subst rest
     | Trec_first | Trec_next ->
       psig_of_tsig ~subst ~trec:(ptype_decl :: trec) rest
     end
-  | _ when trec <> [] ->
-    { psig_desc = Psig_type trec; psig_loc = Location.none } ::
-    psig_of_tsig ~subst tsig
   | Sig_value ({ name }, { val_type; val_kind; val_loc; val_attributes }) :: rest ->
     let pval_prim =
       match val_kind with
       | Val_reg -> []
+#if OCAML_VERSION < (4, 03, 0)
       | Val_prim p -> Primitive.description_list p
+#else
+      | Val_prim p ->
+        let oval = Outcometree.{ oval_name = ""; oval_type = Otyp_abstract;
+                                 oval_prims = []; oval_attributes = [] } in
+        let oval = Primitive.print p oval in
+        oval.Outcometree.oval_prims
+#endif
       | _ -> assert false
     in
     { psig_desc = Psig_value {

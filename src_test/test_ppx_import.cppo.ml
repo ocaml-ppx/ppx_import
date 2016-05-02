@@ -8,6 +8,11 @@ type e = [%import: Stuff.e]
 type f = [%import: Stuff.S.f]
 type 'a g = [%import: 'a Stuff.g]
 type 'b g' = [%import: 'b Stuff.g]
+type h = [%import: Stuff.h]
+#if OCAML_VERSION >= (4, 03, 0)
+module MI = Stuff.MI
+type i = [%import: Stuff.i]
+#endif
 
 let test_constr ctxt =
   ignore ([A1; A2 "a"]);
@@ -16,6 +21,10 @@ let test_constr ctxt =
   ignore ((`A) : c);
   ignore (Int64.zero : d);
   ignore (("a", 1) : e);
+  ignore ((Succ (Zero)) : h);
+#if OCAML_VERSION >= (4, 03, 0)
+  ignore ((I 1) : i);
+#endif
 ;;
 
 type a' = [%import: Stuff.a] [@@deriving show]

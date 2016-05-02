@@ -13,3 +13,12 @@ module type S = sig
 end
 
 type 'a g = Foo of 'a
+
+type h = Zero | Succ of h
+#if OCAML_VERSION >= (4, 03, 0)
+module MI = struct
+  type i = int
+end
+open MI
+type nonrec i = I of i
+#endif
