@@ -1,6 +1,11 @@
 Changelog
 =========
 
+1.1
+---
+
+  * OCaml 4.03 support.
+
 1.0
 ---
 
