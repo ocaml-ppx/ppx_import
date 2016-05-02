@@ -1,11 +1,15 @@
 language: c
+env:
+  - OCAML=4.02.3
+  - OCAML=4.03.0
 script:
-  - echo "yes" | sudo add-apt-repository ppa:avsm/ocaml42+opam12
+  - echo "yes" | sudo add-apt-repository ppa:avsm/ppa
   - sudo apt-get update -qq
-  - sudo apt-get install -qq opam ocaml-native-compilers
+  - sudo apt-get install -qq opam
   - export OPAMYES=1
   - opam init
   - eval `opam config env`
+  - opam switch $OCAML
   - opam pin add -n -k path ppx_import .
   - opam install --deps-only -d -t ppx_import
   - opam install -d -t -v ppx_import
