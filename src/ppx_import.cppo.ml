@@ -194,7 +194,7 @@ let ptype_decl_of_ttype_decl ?manifest ~subst ptype_name ttype_decl =
   in
   { ptype_name; ptype_params; ptype_kind; ptype_manifest;
     ptype_cstrs      = [];
-    ptype_private    = Public;
+    ptype_private    = ttype_decl.type_private;
     ptype_attributes = ttype_decl.type_attributes;
     ptype_loc        = ttype_decl.type_loc; }
 
