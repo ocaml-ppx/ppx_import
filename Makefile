@@ -3,8 +3,8 @@ build:
 	ocaml pkg/build.ml native=true native-dynlink=true
 
 test: build
-	rm _build/src_test/ -rf
-	ocamlbuild -j 0 -use-ocamlfind -classic-display src_test/test_ppx_import.byte --
+	rm -rf _build/src_test
+	ocamlbuild -j 0 -use-ocamlfind -classic-display src_test/test_ppx_import.native --
 
 clean:
 	ocamlbuild -clean

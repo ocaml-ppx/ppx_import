@@ -44,9 +44,16 @@ type package_type =
 
 module type Hashable = [%import: (module Hashtbl.HashedType)]
 
+type self_t = [%import: Test_self_import.t]
+
+let test_self_import ctxt =
+  let v : self_t = `OptionA
+  in Test_self_import.validate_option v
+
 let suite = "Test ppx_import" >::: [
-    "test_constr"   >:: test_constr;
-    "test_deriving" >:: test_deriving;
+    "test_constr"      >:: test_constr;
+    "test_deriving"    >:: test_deriving;
+    "test_self_import" >:: test_self_import;
   ]
 
 let _ =

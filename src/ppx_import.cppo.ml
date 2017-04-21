@@ -128,7 +128,7 @@ let rec core_type_of_type_expr ~subst type_expr =
   | _ ->
     assert false
 
-let ptype_decl_of_ttype_decl ?manifest ~subst ptype_name ttype_decl =
+let ptype_decl_of_ttype_decl ~manifest ~subst ptype_name ttype_decl =
   let subst =
     match manifest with
     | Some { ptyp_desc = Ptyp_constr (_, ptype_args); ptyp_loc } ->
@@ -219,6 +219,18 @@ let subst_of_manifest { ptyp_attributes; ptyp_loc } =
   | Some _ ->
     raise_errorf ~loc:ptyp_loc "Invalid [@with] syntax"
 
+let is_self_reference lid =
+  let fn = !Location.input_name
+           |> Filename.basename
+           |> Filename.chop_extension
+           |> String.uncapitalize
+  in
+  match lid with
+  | Ldot (_) ->
+    let mn = Longident.flatten lid |> List.hd |> String.uncapitalize
+    in fn = mn
+  | _ -> false
+
 let type_declaration mapper type_decl =
   match type_decl with
   | { ptype_attributes; ptype_name; ptype_manifest = Some {
@@ -227,16 +239,25 @@ let type_declaration mapper type_decl =
     | PTyp ({ ptyp_desc = Ptyp_constr ({ txt = lid; loc }, _) } as manifest) ->
       if Ast_mapper.tool_name () = "ocamldep" then
         (* Just put it as manifest *)
-        { type_decl with ptype_manifest = Some manifest }
+        if is_self_reference lid then
+          { type_decl with ptype_manifest = None }
+        else
+          { type_decl with ptype_manifest = Some manifest }
       else
         with_default_loc loc (fun () ->
-          let subst = subst_of_manifest manifest in
-          let subst = subst @ [
-            `Lid (Lident (Longident.last lid)),
-              Typ.constr { txt = Lident ptype_name.txt; loc = ptype_name.loc } []
-          ] in
           let ttype_decl = locate_ttype_decl ~loc (locate_sig ~loc lid) lid in
-          let ptype_decl = ptype_decl_of_ttype_decl ~manifest ~subst ptype_name ttype_decl in
+          let m, s = if is_self_reference lid then
+              None, []
+          else begin
+            let subst = subst_of_manifest manifest in
+            let subst = subst @ [
+                `Lid (Lident (Longident.last lid)),
+                Typ.constr { txt = Lident ptype_name.txt; loc = ptype_name.loc } []
+              ] in
+            Some manifest, subst
+          end
+          in
+          let ptype_decl = ptype_decl_of_ttype_decl ~manifest:m ~subst:s ptype_name ttype_decl in
           { ptype_decl with ptype_attributes })
     | _ -> raise_errorf ~loc "Invalid [%%import] syntax"
     end
@@ -252,7 +273,7 @@ let rec psig_of_tsig ~subst ?(trec=[]) tsig =
 #endif
     { psig_desc; psig_loc = Location.none } :: psig_of_tsig ~subst tsig
   | Sig_type ({ name }, ttype_decl, rec_flag) :: rest ->
-    let ptype_decl = ptype_decl_of_ttype_decl ~subst (Location.mknoloc name) ttype_decl in
+    let ptype_decl = ptype_decl_of_ttype_decl ~manifest:None ~subst (Location.mknoloc name) ttype_decl in
     begin match rec_flag with
     | Trec_not ->
 #if OCAML_VERSION < (4, 03, 0)
