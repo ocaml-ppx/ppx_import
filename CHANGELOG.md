@@ -4,7 +4,7 @@ Changelog
 1.2
 ---
 
-  * Allow extracting types from the current package's MLI file.
+  * Allow extracting types from the current module's interface file.
 
 1.1
 ---
