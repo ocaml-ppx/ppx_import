@@ -315,8 +315,12 @@ let module_type mapper modtype_decl =
     begin match payload with
     | PTyp ({ ptyp_desc = Ptyp_package({ txt = lid; loc } as alias, subst) }) ->
       if Ast_mapper.tool_name () = "ocamldep" then
-        (* Just put it as alias *)
-        { modtype_decl with pmty_desc = Pmty_alias alias }
+        if is_self_reference lid then
+          (* Create a dummy module type to break the circular dependency *)
+          { modtype_decl with pmty_desc = Pmty_signature [] }
+        else
+          (* Just put it as alias *)
+          { modtype_decl with pmty_desc = Pmty_alias alias }
       else
         with_default_loc loc (fun () ->
           match locate_tmodtype_decl ~loc (locate_sig ~loc lid) lid with

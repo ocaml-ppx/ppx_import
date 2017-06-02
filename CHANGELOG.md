@@ -1,6 +1,11 @@
 Changelog
 =========
 
+1.3
+---
+
+  * Also allow extraction of module types from the current module's interface file.
+
 1.2
 ---
 
