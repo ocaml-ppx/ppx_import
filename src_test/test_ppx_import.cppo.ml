@@ -50,10 +50,21 @@ let test_self_import ctxt =
   let v : self_t = `OptionA
   in Test_self_import.validate_option v
 
+module type Self_S = [%import: (module Test_self_import.S)]
+
+module Self_M : Self_S = struct
+  let test () = "test"
+end
+
+let test_self_import_module_type ctxt =
+  let m = (module Self_M : Self_S)
+  in Test_self_import.validate_module_type m
+
 let suite = "Test ppx_import" >::: [
-    "test_constr"      >:: test_constr;
-    "test_deriving"    >:: test_deriving;
-    "test_self_import" >:: test_self_import;
+    "test_constr"                  >:: test_constr;
+    "test_deriving"                >:: test_deriving;
+    "test_self_import"             >:: test_self_import;
+    "test_self_import_module_type" >:: test_self_import_module_type;
   ]
 
 let _ =
