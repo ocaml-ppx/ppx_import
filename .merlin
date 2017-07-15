@@ -1,1 +1,5 @@
-PKG compiler-libs.common ppx_tools.metaquot
+PKG compiler-libs.common ppx_tools_versioned.metaquot_403 ocaml-migrate-parsetree
+FLG -w -3-52
+
+S src
+B _build/src

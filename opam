@@ -1,6 +1,6 @@
 opam-version: "1.2"
 name: "ppx_import"
-version: "1.3"
+version: "2.0"
 maintainer: "whitequark <whitequark@whitequark.org>"
 authors: [ "whitequark <whitequark@whitequark.org>" ]
 license: "MIT"
@@ -17,10 +17,12 @@ build-test: [
   "ocamlbuild" "-classic-display" "-use-ocamlfind" "src_test/test_ppx_import.byte" "--"
 ]
 depends: [
-  "ppx_tools"    {>= "0.99.1"}
-  "ocamlfind"    {build}
-  "cppo"         {build}
-  "ounit"        {test}
-  "ppx_deriving" {test & >= "2.0"}
+  "ppx_tools"               {build & >= "0.99.1"}
+  "ppx_tools_versioned"     {build}
+  "ocaml-migrate-parsetree" {build}
+  "ocamlfind"               {build}
+  "cppo"                    {build}
+  "ounit"                   {test}
+  "ppx_deriving"            {test & >= "2.0"}
 ]
 available: [ ocaml-version >= "4.02.0" & opam-version >= "1.2.2" ]
