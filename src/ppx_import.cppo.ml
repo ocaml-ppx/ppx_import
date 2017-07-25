@@ -336,6 +336,14 @@ let module_type mapper modtype_decl =
     end
   | _ -> default_mapper.module_type mapper modtype_decl
 
+let mapper = { default_mapper with type_declaration; module_type; }
+
 let () =
-  Ast_mapper.register "ppx_import" (fun argv ->
-    { default_mapper with type_declaration; module_type; })
+  Ast_mapper.register "ppx_import" (fun argv -> mapper)
+
+(* This is only used when ppx_import is linked as part of an ocaml-migrate-parsetree
+   driver. *)
+let () =
+  Migrate_parsetree.Driver.register ~name:"ppx_import"
+    (module Migrate_parsetree.OCaml_current)
+    (fun _ _ -> mapper)

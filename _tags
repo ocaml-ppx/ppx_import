@@ -1,4 +1,4 @@
 true: warn(@5@8@10@11@12@14@23@24@26@29@40), bin_annot, safe_string, cppo_V_OCAML
 
-<src/*.{ml,mli,byte,native}>: package(ppx_tools.metaquot)
+<src/*.*>: package(ppx_tools.metaquot), package(ocaml-migrate-parsetree), linkall
 <src_test/*.{ml,byte,native}>: debug, package(oUnit), package(ppx_deriving.std), package(compiler-libs.common), use_import
