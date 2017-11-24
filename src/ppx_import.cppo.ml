@@ -118,6 +118,9 @@ let rec core_type_of_type_expr ~subst type_expr =
   | Tvariant { row_fields; row_closed } ->
     let fields =
       row_fields |> List.map (fun (label, row_field) ->
+#if OCAML_VERSION >= (4, 06, 0)
+        let label = Location.mknoloc label in
+#endif
         match row_field with
         | Rpresent None -> Rtag (label, [], true, [])
         | Rpresent (Some ttyp) ->
