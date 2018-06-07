@@ -48,11 +48,11 @@ let locate_sig ~loc lid =
   List.fold_left (fun sig_items path_item ->
       let rec loop sig_items =
         match sig_items with
-        | Sig_module ({ name }, { md_type = Mty_signature sig_items }, _) :: _
-              when name = path_item ->
+        | Sig_module (id, { md_type = Mty_signature sig_items }, _) :: _
+              when Ident.name id = path_item ->
           sig_items
-        | Sig_modtype ({ name }, { mtd_type = Some (Mty_signature sig_items) }) :: _
-              when name = path_item ->
+        | Sig_modtype (id, { mtd_type = Some (Mty_signature sig_items) }) :: _
+              when Ident.name id = path_item ->
           sig_items
         | _ :: sig_items ->
           loop sig_items
@@ -77,18 +77,18 @@ let locate_tsig_item f ~loc sig_items lid =
 let locate_ttype_decl =
   locate_tsig_item (fun elem ->
     function
-    | Sig_type ({ name }, type_decl, _) when name = elem -> Some type_decl
+    | Sig_type (id, type_decl, _) when Ident.name id = elem -> Some type_decl
     | _ -> None)
 
 let locate_tmodtype_decl =
   locate_tsig_item (fun elem ->
     function
-    | Sig_modtype ({ name }, type_decl) when name = elem -> Some type_decl
+    | Sig_modtype (id, type_decl) when Ident.name id = elem -> Some type_decl
     | _ -> None)
 
 let rec longident_of_path path =
   match path with
-  | Path.Pident { name } -> Lident name
+  | Path.Pident id -> Lident (Ident.name id)
   | Path.Pdot (path, name, _) -> Ldot (longident_of_path path, name)
   | Path.Papply (lhs, rhs) -> Lapply (longident_of_path lhs, longident_of_path rhs)
 
@@ -162,7 +162,7 @@ let ptype_decl_of_ttype_decl ~manifest ~subst ptype_name ttype_decl =
   and ptype_kind =
     let map_labels =
       List.map (fun ld ->
-        { pld_name       = { txt = ld.ld_id.name; loc = ld.ld_loc };
+        { pld_name       = { txt = Ident.name ld.ld_id; loc = ld.ld_loc };
           pld_mutable    = ld.ld_mutable;
           pld_type       = core_type_of_type_expr ~subst ld.ld_type;
           pld_loc        = ld.ld_loc;
@@ -184,7 +184,7 @@ let ptype_decl_of_ttype_decl ~manifest ~subst ptype_name ttype_decl =
 #endif
       in
       Ptype_variant (constrs |> List.map (fun cd ->
-        { pcd_name       = { txt = cd.cd_id.name; loc = cd.cd_loc };
+        { pcd_name       = { txt = Ident.name cd.cd_id; loc = cd.cd_loc };
           pcd_args       = map_args cd.cd_args;
           pcd_res        = (match cd.cd_res with Some x -> Some (core_type_of_type_expr ~subst x)
                                                | None -> None);
@@ -275,8 +275,8 @@ let rec psig_of_tsig ~subst ?(trec=[]) tsig =
     let psig_desc = Psig_type(Recursive, trec) in
 #endif
     { psig_desc; psig_loc = Location.none } :: psig_of_tsig ~subst tsig
-  | Sig_type ({ name }, ttype_decl, rec_flag) :: rest ->
-    let ptype_decl = ptype_decl_of_ttype_decl ~manifest:None ~subst (Location.mknoloc name) ttype_decl in
+  | Sig_type (id, ttype_decl, rec_flag) :: rest ->
+    let ptype_decl = ptype_decl_of_ttype_decl ~manifest:None ~subst (Location.mknoloc (Ident.name id)) ttype_decl in
     begin match rec_flag with
     | Trec_not ->
 #if OCAML_VERSION < (4, 03, 0)
@@ -288,7 +288,7 @@ let rec psig_of_tsig ~subst ?(trec=[]) tsig =
     | Trec_first | Trec_next ->
       psig_of_tsig ~subst ~trec:(ptype_decl :: trec) rest
     end
-  | Sig_value ({ name }, { val_type; val_kind; val_loc; val_attributes }) :: rest ->
+  | Sig_value (id, { val_type; val_kind; val_loc; val_attributes }) :: rest ->
     let pval_prim =
       match val_kind with
       | Val_reg -> []
@@ -304,7 +304,7 @@ let rec psig_of_tsig ~subst ?(trec=[]) tsig =
       | _ -> assert false
     in
     { psig_desc = Psig_value {
-        pval_name = Location.mknoloc name; pval_loc = val_loc;
+        pval_name = Location.mknoloc (Ident.name id); pval_loc = val_loc;
         pval_attributes = val_attributes;
         pval_prim; pval_type = core_type_of_type_expr ~subst val_type; };
       psig_loc = val_loc } ::
