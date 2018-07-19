@@ -135,15 +135,15 @@ let ptype_decl_of_ttype_decl ~manifest ~subst ptype_name ttype_decl =
   let subst =
     match manifest with
     | Some { ptyp_desc = Ptyp_constr (_, ptype_args); ptyp_loc } ->
-      begin try
-        subst @ (List.map2 (fun tparam pparam ->
+      subst @ begin try
+          List.map2 (fun tparam pparam ->
             match tparam with
-            | { desc = Tvar (Some var) } -> [`Var var, pparam]
-            | { desc = Tvar None }       -> []
-            | _ -> assert false)
-          ttype_decl.type_params ptype_args
-        |> List.concat)
-      with Invalid_argument "List.map2" ->
+              | { desc = Tvar (Some var) } -> [`Var var, pparam]
+              | { desc = Tvar None }       -> []
+              | _ -> assert false)
+            ttype_decl.type_params ptype_args
+        |> List.concat
+      with Invalid_argument _ ->
         raise_errorf ~loc:ptyp_loc "Imported type has %d parameter(s), but %d are passed"
                                    (List.length ttype_decl.type_params)
                                    (List.length ptype_args)
@@ -222,15 +222,22 @@ let subst_of_manifest { ptyp_attributes; ptyp_loc } =
   | Some _ ->
     raise_errorf ~loc:ptyp_loc "Invalid [@with] syntax"
 
+let uncapitalize =
+#if OCAML_VERSION < (4, 03, 0)
+  String.uncapitalize
+#else
+  String.uncapitalize_ascii
+#endif
+
 let is_self_reference lid =
   let fn = !Location.input_name
            |> Filename.basename
            |> Filename.chop_extension
-           |> String.uncapitalize
+           |> uncapitalize
   in
   match lid with
   | Ldot (_) ->
-    let mn = Longident.flatten lid |> List.hd |> String.uncapitalize
+    let mn = Longident.flatten lid |> List.hd |> uncapitalize
     in fn = mn
   | _ -> false
 
