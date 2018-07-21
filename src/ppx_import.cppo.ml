@@ -19,72 +19,170 @@ let raise_errorf ?sub ?if_highlight ?loc message =
 let replace_loc loc =
   { default_mapper with location = fun _ _ -> loc }
 
-let locate_sig ~loc lid =
-  let cu, path =
-    match lid with
-    | Lident _ -> !Location.input_name, []
-    | Lapply _ -> assert false
-    | Ldot (lid, _) ->
-      match Longident.flatten lid with
-      | cu :: path -> cu, path
-      | _ -> assert false
-  in
-  let cmi_paths =
-    !Config.load_path |>
-    List.map (fun dir ->
-      [Filename.concat dir (cu ^ ".cmi");
-       Filename.concat dir ((String.uncapitalize cu) ^ ".cmi")]) |>
-    List.flatten
-  in
-  let cmi =
-    try
-      cmi_paths |>
-      List.find (fun intf ->
-        Sys.file_exists intf) |>
-      Cmi_format.read_cmi
-    with Not_found ->
-      raise_errorf ~loc "[%%import]: cannot locate module %s" cu
-  in
-  List.fold_left (fun sig_items path_item ->
-      let rec loop sig_items =
-        match sig_items with
-        | Sig_module (id, { md_type = Mty_signature sig_items }, _) :: _
-              when Ident.name id = path_item ->
-          sig_items
-        | Sig_modtype (id, { mtd_type = Some (Mty_signature sig_items) }) :: _
-              when Ident.name id = path_item ->
-          sig_items
-        | _ :: sig_items ->
-          loop sig_items
-        | [] ->
-          raise_errorf ~loc "[%%import]: cannot locate module %s"
-                            (String.concat "." (cu :: path))
-      in
-      loop sig_items)
-    cmi.Cmi_format.cmi_sign path
+let lazy_env = lazy (
+  (* It is important that the typing environment is not evaluated
+     right away, but only once the ppx-context has been loaded from
+     the AST, so that Config.load_path and the rest of the environment
+     context are correctly set.
 
-let locate_tsig_item f ~loc sig_items lid =
-  let elem = Longident.last lid in
+     The environment setting should happen when reading the
+     ppx-context attribute which is the very first structure/signature
+     item sent to ppx rewriters. In particular, this happens before
+     the [%import ] extensions are traversed, which are the places in
+     this code where 'env' is forced.
+
+     We would also have the option to not have a global environment, but
+     recompute the typing environment on each [%import ] extension. We don't
+     see any advantage in doing this, given that we compute the global/initial
+     environment that is the same at all program points.
+  *)
+  (* We need to set recursive_types manually, because it is not part
+     of the context automatically saved by Ast_mapper (as of 4.06),
+     and this prevents loading the interface of recursive-types-using
+     modules. On the other hand, setting recursive_types more often
+     than necessary does not seem harmful. *)
+  Clflags.recursive_types := true;
+  Compmisc.init_path false;
+  Compmisc.initial_env ()
+)
+
+let string_of_lid lid =
+  let rec print lid acc = match lid with
+    | Longident.Lident s -> s::acc
+    | Longident.Ldot (lid, id) -> print lid ("." :: id :: acc)
+    | Longident.Lapply (la, lb) -> print la ("(" :: print lb (")" :: acc))
+  in String.concat "" (print lid [])
+
+let try_find_module ~loc env lid =
+  (* Note: we are careful to call `Env.lookup_module` and not
+     `Typetexp.lookup_module`, because we want to reason precisely
+     about the possible failures: we want to handle the case where
+     the module path does not exist, but let all the other errors
+     (invalid .cmi format, etc.) bubble up to the error handler.
+
+     `Env.lookup_module` allows to do this easily as it raises
+     a well-identified `Not_found` exception, while
+     `Typetexp.lookup_module` wraps the Not_found failure in
+     user-oriented data and is not meant for catching.
+
+     `Env.find_module` can raise `Not_found` again; we suspect that
+     it will not in the cases where `lookup_module` returned correctly,
+     but better be safe and bundle them in the same try..with.
+  *)
+  try
+    let path = Env.lookup_module ~load:true lid env in
+    let module_decl = Env.find_module path env in
+    Some module_decl.md_type
+  with Not_found -> None
+
+let try_find_module_type ~loc env lid =
+  (* Here again we prefer to handle the `Not_found` case, so we
+     use `Env.lookup_module` rather than `Typetexp.lookup_module`. *)
+  try
+    let _path, modtype_decl =
+      Env.lookup_modtype
+#if OCAML_VERSION >= (4, 03, 0)
+        ~loc
+#endif
+        lid env
+    in
+    Some (match modtype_decl.mtd_type with
+        | None ->
+          raise_errorf ~loc
+            "[%%import]: cannot access the signature of the abstract module %s"
+            (string_of_lid lid)
+        | Some module_type -> module_type)
+  with Not_found -> None
+
+let rec try_open_module_type env module_type =
+  match module_type with
+  | Mty_signature sig_items -> Some sig_items
+  | Mty_functor _ -> None
+  | (Mty_ident path | Mty_alias (_, path)) ->
+    begin match
+        (try Some (Env.find_module path env) with Not_found -> None)
+      with
+      | None -> None
+      | Some module_decl -> try_open_module_type env module_decl.md_type
+    end
+
+let open_module_type ~loc env lid module_type =
+  match try_open_module_type env module_type with
+  | Some sig_items -> sig_items
+  | None ->
+    raise_errorf ~loc "[%%import]: cannot find the components of %s"
+      (string_of_lid lid)
+
+let locate_sig ~loc env lid =
+  let head, path = match Longident.flatten lid with
+    | head :: path -> Longident.Lident head, path
+    | _ -> assert false
+  in
+  let head_module_type =
+    match
+      try_find_module ~loc env head,
+      lazy (try_find_module_type ~loc env head)
+    with
+    | Some mty, _ -> mty
+    | None, lazy (Some mty) -> mty
+    | None, lazy None ->
+      raise_errorf ~loc "[%%import]: cannot locate module %s"
+        (string_of_lid lid)
+  in
+  let get_sub_module_type (lid, module_type) path_item =
+    let sig_items = open_module_type ~loc env lid module_type in
+    let rec loop sig_items =
+      match sig_items with
+      | Sig_module (id, { md_type }, _) :: _
+        when Ident.name id = path_item ->
+        md_type
+      | Sig_modtype (id, { mtd_type = Some md_type }) :: _
+        when Ident.name id = path_item ->
+        md_type
+      | _ :: sig_items ->
+        loop sig_items
+      | [] ->
+        raise_errorf ~loc "[%%import]: cannot find the signature of %s in %s"
+          path_item (string_of_lid lid)
+    in
+    let sub_module_type = loop sig_items in
+    (Longident.Ldot (lid, path_item), sub_module_type)
+  in
+  let (_lid, sub_module_type) =
+    List.fold_left get_sub_module_type (head, head_module_type) path
+  in
+  open_module_type ~loc env lid sub_module_type
+
+let try_get_tsig_item f ~loc sig_items elem =
   let rec loop sig_items =
     match sig_items with
     | item :: sig_items ->
-      (match f elem item with Some x -> x | None -> loop sig_items)
-    | [] -> raise_errorf ~loc "[%%import]: cannot locate type %s"
-                              (String.concat "." (Longident.flatten lid))
+      (match f elem item with Some x -> Some x | None -> loop sig_items)
+    | [] -> None
   in
   loop sig_items
 
-let locate_ttype_decl =
-  locate_tsig_item (fun elem ->
-    function
+let get_type_decl ~loc sig_items parent_lid elem =
+  let select_type elem = function
     | Sig_type (id, type_decl, _) when Ident.name id = elem -> Some type_decl
-    | _ -> None)
+    | _ -> None
+  in
+  match try_get_tsig_item select_type ~loc sig_items elem with
+  | None ->
+    raise_errorf "[%%import]: cannot find the type %s in %s"
+      elem (string_of_lid parent_lid)
+  | Some decl -> decl
 
-let locate_tmodtype_decl =
-  locate_tsig_item (fun elem ->
-    function
+let get_modtype_decl ~loc sig_items parent_lid elem =
+  let select_modtype elem = function
     | Sig_modtype (id, type_decl) when Ident.name id = elem -> Some type_decl
-    | _ -> None)
+    | _ -> None
+  in
+  match try_get_tsig_item select_modtype ~loc sig_items elem with
+  | None ->
+    raise_errorf "[%%import]: cannot find the module type %s in %s"
+      elem (string_of_lid parent_lid)
+  | Some decl -> decl
 
 let rec longident_of_path path =
   match path with
@@ -255,7 +353,22 @@ let type_declaration mapper type_decl =
           { type_decl with ptype_manifest = Some manifest }
       else
         with_default_loc loc (fun () ->
-          let ttype_decl = locate_ttype_decl ~loc (locate_sig ~loc lid) lid in
+          let ttype_decl =
+            let env = Lazy.force lazy_env in
+            match lid with
+            | Lapply _ ->
+              raise_errorf ~loc
+                "[%%import] cannot import a functor application %s"
+                (string_of_lid lid)
+            | Lident _ as head_id ->
+              (* In this case, we know for sure that the user intends this lident
+                 as a type name, so we use Typetexp.find_type and let the failure
+                 cases propagate to the user. *)
+              Typetexp.find_type env loc head_id |> snd
+            | Ldot (parent_id, elem) ->
+              let sig_items = locate_sig ~loc env parent_id in
+              get_type_decl ~loc sig_items parent_id elem
+          in
           let m, s = if is_self_reference lid then
               None, []
           else begin
@@ -333,7 +446,22 @@ let module_type mapper modtype_decl =
           { modtype_decl with pmty_desc = Pmty_alias alias }
       else
         with_default_loc loc (fun () ->
-          match locate_tmodtype_decl ~loc (locate_sig ~loc lid) lid with
+          let env = Lazy.force lazy_env in
+          let tmodtype_decl = match lid with
+            | Longident.Lapply _ ->
+              raise_errorf ~loc
+                "[%%import] cannot import a functor application %s"
+                (string_of_lid lid)
+            | Longident.Lident _ as head_id ->
+              (* In this case, we know for sure that the user intends this lident
+                 as a module type name, so we use Typetexp.find_type and
+                 let the failure cases propagate to the user. *)
+              Typetexp.find_modtype env loc head_id |> snd
+            | Longident.Ldot (parent_id, elem) ->
+              let sig_items = locate_sig ~loc env parent_id in
+              get_modtype_decl ~loc sig_items parent_id elem
+          in
+          match tmodtype_decl with
           | { mtd_type = Some (Mty_signature tsig) } ->
             let subst = List.map (fun ({ txt; }, typ) -> `Lid txt, typ) subst in
             let psig  = psig_of_tsig ~subst tsig in
