@@ -98,7 +98,14 @@ let rec try_open_module_type env module_type =
   match module_type with
   | Mty_signature sig_items -> Some sig_items
   | Mty_functor _ -> None
-  | (Mty_ident path | Mty_alias (_, path)) ->
+  | (Mty_ident path
+     | Mty_alias
+#if OCAML_VERSION <= (4, 03, 0)
+                 path
+#else
+                 (_, path)
+#endif
+    ) ->
     begin match
         (try Some (Env.find_module path env) with Not_found -> None)
       with
