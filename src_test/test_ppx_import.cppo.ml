@@ -42,7 +42,7 @@ type package_type =
                  Longident.t  := Longident.t [@printer pp_longident]]]
 [@@deriving show]
 
-module type Hashable = [%import: (module Hashtbl.HashedType)]
+module type Hashable = [%import: (module Stdlib__hashtbl.HashedType)]
 
 type self_t = [%import: Test_self_import.t]
 
