@@ -9,12 +9,10 @@ type f = [%import: Stuff.S.f]
 type 'a g = [%import: 'a Stuff.g]
 type 'b g' = [%import: 'b Stuff.g]
 type h = [%import: Stuff.h]
-#if OCAML_VERSION >= (4, 03, 0)
 module MI = Stuff.MI
 type i = [%import: Stuff.i]
-#endif
 
-let test_constr ctxt =
+let test_constr _ctxt =
   ignore ([A1; A2 "a"]);
   ignore (Stuff.A1 = A1);
   ignore { b1 = A1; b2 = "x"; b3 = Int64.zero };
@@ -22,14 +20,12 @@ let test_constr ctxt =
   ignore (Int64.zero : d);
   ignore (("a", 1) : e);
   ignore ((Succ (Zero)) : h);
-#if OCAML_VERSION >= (4, 03, 0)
   ignore ((I 1) : i);
-#endif
 ;;
 
 type a' = [%import: Stuff.a] [@@deriving show]
 
-let test_deriving ctxt =
+let test_deriving _ctxt =
   assert_equal ~printer:(fun x -> x)
                "(Stuff.A2 \"a\")" (show_a' (A2 "a"))
 
@@ -46,7 +42,7 @@ module type Hashable = [%import: (module Hashtbl.HashedType)]
 
 type self_t = [%import: Test_self_import.t]
 
-let test_self_import ctxt =
+let test_self_import _ctxt =
   let v : self_t = `OptionA
   in Test_self_import.validate_option v
 
@@ -56,7 +52,7 @@ module Self_M : Self_S = struct
   let test () = "test"
 end
 
-let test_self_import_module_type ctxt =
+let test_self_import_module_type _ctxt =
   let m = (module Self_M : Self_S)
   in Test_self_import.validate_module_type m
 

@@ -1,15 +1,13 @@
 build:
-	cp pkg/META.in pkg/META
-	ocaml pkg/build.ml native=true native-dynlink=true
+	dune build
 
-test: build
-	rm -rf _build/src_test
-	ocamlbuild -j 0 -use-ocamlfind -classic-display src_test/test_ppx_import.native --
+test:
+	dune runtest
 
 clean:
-	ocamlbuild -clean
+	dune clean
 
-.PHONY: build test clean
+.PHONY: build test clean release
 
 VERSION      := $$(opam query --version)
 NAME_VERSION := $$(opam query --name-version)
@@ -21,5 +19,3 @@ release:
 	opam publish prepare $(NAME_VERSION) $(ARCHIVE)
 	opam publish submit $(NAME_VERSION)
 	rm -rf $(NAME_VERSION)
-
-.PHONY: release
