@@ -1,6 +1,18 @@
 Changelog
 =========
 
+1.5
+---
+
+  * OCaml 4.07 support
+    #24
+    (Damien Doligez)
+
+  * Call the type-checker (through compiler-libs) instead of reading
+    `.cmi` files directly, to correctly resolve module aliases.
+    #25
+    (Gabriel Scherer)
+
 1.4
 ---
 
