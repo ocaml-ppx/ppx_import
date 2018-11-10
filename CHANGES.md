@@ -1,6 +1,15 @@
 Changelog
 =========
 
+1.6
+---
+
+  * ocaml-migrate-parsetree + dune support #26
+    (Jérémie Dimino & Emilio Jesús Gallego Arias)
+
+  * Move to OPAM 2.0, adapt Travis CI.
+    (Emilio Jesús Gallego Arias)
+
 1.5
 ---
 

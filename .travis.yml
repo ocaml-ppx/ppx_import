@@ -1,19 +1,25 @@
 language: c
 env:
-  - OCAML=4.02.3
-  - OCAML=4.03.0
+  global:
+  - OPAMYES="true"
+  - OPAMJOBS="2"
+  matrix:
   - OCAML=4.04.2
   - OCAML=4.05.0
-  - OCAML=4.06.0
-  - OCAML=4.07.0
+  - OCAML=4.06.1
+  - OCAML=4.07.1
 script:
-  - echo "yes" | sudo add-apt-repository ppa:avsm/ppa
+  # The opam package in this repository seems not to be working.
+  # - echo "yes" | sudo add-apt-repository ppa:avsm/ppa-opam-experimental
+  # - sudo apt-get install -qq opam
+  - echo "yes" | sudo add-apt-repository ppa:ansible/bubblewrap
   - sudo apt-get update -qq
-  - sudo apt-get install -qq opam
-  - export OPAMYES=1
-  - opam init
-  - eval `opam config env`
-  - opam switch $OCAML
+  - sudo apt-get install -qq bubblewrap
+  - sudo curl -sL https://github.com/ocaml/opam/releases/download/2.0.0/opam-2.0.0-x86_64-linux -o /usr/bin/opam
+  - sudo chmod 755 /usr/bin/opam
+  - opam init -c $OCAML
+  - opam switch set $OCAML
+  - eval $(opam env)
   - opam pin add -n -k path ppx_import .
   - opam install --deps-only -d -t ppx_import
   - opam install -d -t -v ppx_import
