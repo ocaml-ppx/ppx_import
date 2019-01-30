@@ -1,4 +1,7 @@
+dist: xenial
+sudo: required
 language: c
+
 env:
   global:
   - OPAMYES="true"
@@ -8,16 +11,11 @@ env:
   - OCAML=4.05.0
   - OCAML=4.06.1
   - OCAML=4.07.1
+
 script:
-  # The opam package in this repository seems not to be working.
-  # - echo "yes" | sudo add-apt-repository ppa:avsm/ppa-opam-experimental
-  # - sudo apt-get install -qq opam
-  - echo "yes" | sudo add-apt-repository ppa:ansible/bubblewrap
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq bubblewrap
-  - sudo curl -sL https://github.com/ocaml/opam/releases/download/2.0.0/opam-2.0.0-x86_64-linux -o /usr/bin/opam
+  - sudo curl -sL https://github.com/ocaml/opam/releases/download/2.0.2/opam-2.0.2-x86_64-linux -o /usr/bin/opam
   - sudo chmod 755 /usr/bin/opam
-  - opam init -c $OCAML
+  - opam init --disable-sandboxing -c $OCAML
   - opam switch set $OCAML
   - eval $(opam env)
   - opam pin add -n -k path ppx_import .
