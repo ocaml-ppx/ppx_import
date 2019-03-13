@@ -17,6 +17,18 @@ Usage
 
 In order to use _import_, require the package `ppx_import`.
 
+#### Dune and `ppx_deriving`
+
+When using `ppx_import` together with [`ppx_deriving`](https://github.com/ocaml-ppx/ppx_deriving) and Dune, you should use [`staged_pps`](https://dune.readthedocs.io/en/latest/dune-files.html#preprocessing-specification) for the preprocessing specification.
+
+Example:
+
+```
+(library
+  (name foo)
+  (preprocess (staged_pps ppx_import ppx_deriving.show))
+```
+
 Syntax
 ------
 
