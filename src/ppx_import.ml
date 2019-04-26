@@ -380,7 +380,9 @@ let type_declaration ~tool_name mapper type_decl =
 
 let rec psig_of_tsig ~subst ?(trec=[]) tsig =
   match tsig with
-  | (Sig_type (_, _, Trec_first) | _) :: _ when trec <> [] ->
+  | _ when trec <> [] && match tsig with
+    | Sig_type (_, _, recflag) :: _ -> recflag = Trec_first
+    | _ -> true ->
     let psig_desc = Psig_type(Recursive, trec) in
     { psig_desc; psig_loc = Location.none } :: psig_of_tsig ~subst tsig
   | Sig_type (id, ttype_decl, rec_flag) :: rest ->
