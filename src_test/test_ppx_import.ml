@@ -11,6 +11,7 @@ type 'b g' = [%import: 'b Stuff.g]
 type h = [%import: Stuff.h]
 module MI = Stuff.MI
 type i = [%import: Stuff.i]
+module type S_rec = [%import: (module Stuff.S_rec)]
 
 let test_constr _ctxt =
   ignore ([A1; A2 "a"]);
