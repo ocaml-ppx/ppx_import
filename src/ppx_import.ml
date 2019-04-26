@@ -378,22 +378,27 @@ let type_declaration ~tool_name mapper type_decl =
     end
   | _ -> default_mapper.type_declaration mapper type_decl
 
-let rec psig_of_tsig ~subst ?(trec=[]) tsig =
+let rec cut_tsig_block_of_rec_types accu tsig =
   match tsig with
-  | _ when trec <> [] && match tsig with
-    | Sig_type (_, _, recflag) :: _ -> recflag = Trec_first
-    | _ -> true ->
-    let psig_desc = Psig_type(Recursive, trec) in
-    { psig_desc; psig_loc = Location.none } :: psig_of_tsig ~subst tsig
+  | Sig_type (id, ttype_decl, Trec_next) :: rest ->
+      cut_tsig_block_of_rec_types ((id, ttype_decl) :: accu) rest
+  | _ ->
+      (List.rev accu, tsig)
+
+let rec psig_of_tsig ~subst tsig =
+  match tsig with
   | Sig_type (id, ttype_decl, rec_flag) :: rest ->
-    let ptype_decl = ptype_decl_of_ttype_decl ~manifest:None ~subst (Location.mknoloc (Ident.name id)) ttype_decl in
-    begin match rec_flag with
-    | Trec_not ->
-      let psig_desc = Psig_type(Nonrecursive, [ptype_decl]) in
+      let accu = [(id, ttype_decl)] in
+      let (rec_flag, (block, rest)) =
+        match rec_flag with
+        | Trec_not -> (Nonrecursive, (accu, rest))
+        | Trec_first -> (Recursive, cut_tsig_block_of_rec_types accu rest)
+        | Trec_next -> assert false in
+      let block = block |> List.map (fun (id, ttype_decl) ->
+        ptype_decl_of_ttype_decl ~manifest:None ~subst
+          (Location.mknoloc (Ident.name id)) ttype_decl) in
+      let psig_desc = Psig_type(rec_flag, block) in
       { psig_desc; psig_loc = Location.none } :: psig_of_tsig ~subst rest
-    | Trec_first | Trec_next ->
-      psig_of_tsig ~subst ~trec:(ptype_decl :: trec) rest
-    end
   | Sig_value (id, { val_type; val_kind; val_loc; val_attributes }) :: rest ->
     let pval_prim =
       match val_kind with
