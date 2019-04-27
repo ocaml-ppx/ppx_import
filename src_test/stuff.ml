@@ -20,3 +20,8 @@ module MI = struct
 end
 open MI
 type nonrec i = I of i
+
+module type S_rec = sig
+  type t = A of u
+  and u = B of t
+end
