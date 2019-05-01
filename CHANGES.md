@@ -1,3 +1,9 @@
+1.6.1
+-----
+
+  * Fix import of signatures with mutually recursive types
+    (Thierry Martinez #35, review and tweaks by Gabriel Scherer)
+
 1.6
 ---
 
