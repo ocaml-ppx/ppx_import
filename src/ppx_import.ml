@@ -200,8 +200,16 @@ let rec core_type_of_type_expr ~subst type_expr =
     end
   | Tarrow (label, lhs, rhs, _) ->
     let label = Tt.copy_arg_label label in
-    Typ.arrow label (core_type_of_type_expr ~subst lhs)
-                    (core_type_of_type_expr ~subst rhs)
+    let lhs = core_type_of_type_expr ~subst lhs in
+    let lhs =
+      match label with
+      | Optional _ ->
+          begin match lhs with
+          | [%type: [%t? lhs] option] -> lhs
+          | _ -> assert false
+          end
+      | _ -> lhs in
+    Typ.arrow label lhs (core_type_of_type_expr ~subst rhs)
   | Ttuple xs ->
     Typ.tuple (List.map (core_type_of_type_expr ~subst) xs)
   | Tconstr (path, args, _) ->

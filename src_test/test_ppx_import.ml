@@ -30,6 +30,13 @@ let test_deriving _ctxt =
   assert_equal ~printer:(fun x -> x)
                "(Stuff.A2 \"a\")" (show_a' (A2 "a"))
 
+module type S_optional = [%import: (module Stuff.S_optional)]
+
+module Test_optional : S_optional = struct
+  let f ?(opt = 0) () =
+    ignore opt
+end
+
 type longident = [%import: Longident.t] [@@deriving show]
 
 type package_type =

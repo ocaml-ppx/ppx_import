@@ -25,3 +25,7 @@ module type S_rec = sig
   type t = A of u
   and u = B of t
 end
+
+module type S_optional = sig
+  val f : ?opt:int -> unit -> unit
+end
