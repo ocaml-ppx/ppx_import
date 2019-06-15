@@ -2,11 +2,12 @@ module At = Asttypes
 module Pt = Parsetree
 module Ot = Outcometree
 
-module Ab = Migrate_parsetree.Ast_406.Asttypes
-module Pb = Migrate_parsetree.Ast_406.Parsetree
-module Ob = Migrate_parsetree.Ast_406.Outcometree
+open Migrate_parsetree
+module Ab = Ast_407.Asttypes
+module Pb = Ast_407.Parsetree
+module Ob = Ast_407.Outcometree
 
-module IMigrate = Migrate_parsetree.Convert(Migrate_parsetree.Versions.OCaml_current)(Migrate_parsetree.Versions.OCaml_406)
+module IMigrate = Convert(Versions.OCaml_current)(Versions.OCaml_407)
 
 (* copy_mutable_flag / private_flag / arg_label are not exported by
    OMP so not worth the pain of the hack *)
@@ -29,9 +30,9 @@ let copy_arg_label (l : At.arg_label) : Ab.arg_label =
 (* Here we want to do a hack due to the large type *)
 let copy_attributes (l : Pt.attributes) : Pb.attributes =
   (* Hack *)
-  let td = Pt.({ ptyp_desc = Ptyp_any;
-                 ptyp_loc = Location.none;
-                 ptyp_attributes = l;
+  let td = Pt.({ ptyp_desc = Ptyp_any
+               ; ptyp_loc = Location.none
+               ; ptyp_attributes = l
                } ) in
   let td = IMigrate.copy_core_type td in
   td.ptyp_attributes
