@@ -1,3 +1,9 @@
+1.6.2
+-----
+
+  * Fix import of module types with optional arguments
+    (Thierry Martinez #37, review by whitequark)
+
 1.6.1
 -----
 
