@@ -2,11 +2,11 @@ module At = Asttypes
 module Pt = Parsetree
 module Ot = Outcometree
 
-module Ab = Ast_406.Asttypes
-module Pb = Ast_406.Parsetree
-module Ob = Ast_406.Outcometree
+module Ab = Migrate_parsetree.Ast_406.Asttypes
+module Pb = Migrate_parsetree.Ast_406.Parsetree
+module Ob = Migrate_parsetree.Ast_406.Outcometree
 
-module IMigrate = Migrate_parsetree.Convert(Migrate_parsetree_versions.OCaml_current)(Migrate_parsetree_versions.OCaml_406)
+module IMigrate = Migrate_parsetree.Convert(Migrate_parsetree.Versions.OCaml_current)(Migrate_parsetree.Versions.OCaml_406)
 
 (* copy_mutable_flag / private_flag / arg_label are not exported by
    OMP so not worth the pain of the hack *)

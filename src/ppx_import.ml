@@ -1,14 +1,12 @@
 (* Don't mask native Outcometree *)
 module Ot = Outcometree
 
-open Ast_406
 open Ppx_tools_406
-
-open Longident
-open Asttypes
-open Parsetree
-open Ast_mapper
-open Ast_helper
+open Migrate_parsetree.Ast_406.Longident
+open Migrate_parsetree.Ast_406.Asttypes
+open Migrate_parsetree.Ast_406.Parsetree
+open Migrate_parsetree.Ast_406.Ast_mapper
+open Migrate_parsetree.Ast_406.Ast_helper
 open Types
 
 module Tt = Ppx_types_migrate
