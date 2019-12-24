@@ -13,7 +13,7 @@ env:
   - OCAML=4.07.1
 
 script:
-  - sudo curl -sL https://github.com/ocaml/opam/releases/download/2.0.4/opam-2.0.4-x86_64-linux -o /usr/bin/opam
+  - sudo curl -sL https://github.com/ocaml/opam/releases/download/2.0.5/opam-2.0.5-x86_64-linux -o /usr/bin/opam
   - sudo chmod 755 /usr/bin/opam
   - opam init --disable-sandboxing -c $OCAML
   - opam switch set $OCAML
