@@ -184,11 +184,7 @@ let get_modtype_decl ~loc sig_items parent_lid elem =
       elem (string_of_lid parent_lid)
   | Some decl -> decl
 
-let rec longident_of_path path =
-  match path with
-  | Path.Pident id -> Lident (Ident.name id)
-  | Path.Pdot (path, name, _) -> Ldot (longident_of_path path, name)
-  | Path.Papply (lhs, rhs) -> Lapply (longident_of_path lhs, longident_of_path rhs)
+let longident_of_path = Untypeast.lident_of_path
 
 let rec core_type_of_type_expr ~subst type_expr =
   match type_expr.desc with
