@@ -13,9 +13,9 @@ open Types
 
 module Tt = Ppx_types_migrate
 
-let raise_errorf ?sub ?if_highlight ?loc message =
+let raise_errorf ?sub ?loc message =
   message |> Printf.kprintf (fun str ->
-    let err = Location.error ?sub ?if_highlight ?loc str in
+    let err = Location.error ?sub ?loc str in
     raise (Location.Error err))
 
 let replace_loc loc =
