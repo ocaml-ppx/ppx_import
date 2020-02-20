@@ -3,7 +3,6 @@
  (kind ppx_rewriter)
  (preprocess (pps ppx_tools_versioned.metaquot_407))
  (libraries ppx_tools_versioned
-            ppx_tools_versioned.metaquot_407
             ocaml-migrate-parsetree))
 
 (rule
