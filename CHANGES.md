@@ -1,3 +1,10 @@
+1.7
+---
+
+  * OCaml 4.08 and 4.09 support
+    #46
+    (Etienne Millon)
+
 1.6.2
 -----
 

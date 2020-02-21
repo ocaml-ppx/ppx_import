@@ -3,5 +3,10 @@
  (kind ppx_rewriter)
  (preprocess (pps ppx_tools_versioned.metaquot_407))
  (libraries ppx_tools_versioned
-            ppx_tools_versioned.metaquot_407
             ocaml-migrate-parsetree))
+
+(rule
+ (deps (glob_files compat/*.ml))
+ (targets compat.ml)
+ (action
+  (with-stdout-to %{targets} (run ./compat/gen.exe))))

@@ -13,9 +13,9 @@ open Types
 
 module Tt = Ppx_types_migrate
 
-let raise_errorf ?sub ?if_highlight ?loc message =
+let raise_errorf ?sub ?loc message =
   message |> Printf.kprintf (fun str ->
-    let err = Location.error ?sub ?if_highlight ?loc str in
+    let err = Location.error ?sub ?loc str in
     raise (Location.Error err))
 
 let replace_loc loc =
@@ -44,7 +44,7 @@ let lazy_env = lazy (
      modules. On the other hand, setting recursive_types more often
      than necessary does not seem harmful. *)
   Clflags.recursive_types := true;
-  Compmisc.init_path false;
+  Compat.init_path ();
   Compmisc.initial_env ()
 )
 
@@ -95,7 +95,7 @@ let try_find_module_type ~loc env lid =
   with Not_found -> None
 
 let rec try_open_module_type env module_type =
-  match module_type with
+  match Compat.migrate_module_type module_type with
   | Mty_signature sig_items -> Some sig_items
   | Mty_functor _ -> None
   | (Mty_ident path | Mty_alias (_, path) ) ->
@@ -132,7 +132,7 @@ let locate_sig ~loc env lid =
   let get_sub_module_type (lid, module_type) path_item =
     let sig_items = open_module_type ~loc env lid module_type in
     let rec loop sig_items =
-      match sig_items with
+      match (sig_items : Compat.signature_item_407 list) with
       | Sig_module (id, { md_type ; _ }, _) :: _
         when Ident.name id = path_item ->
         md_type
@@ -145,7 +145,7 @@ let locate_sig ~loc env lid =
         raise_errorf ~loc "[%%import]: cannot find the signature of %s in %s"
           path_item (string_of_lid lid)
     in
-    let sub_module_type = loop sig_items in
+    let sub_module_type = loop (List.map Compat.migrate_signature_item sig_items) in
     (Longident.Ldot (lid, path_item), sub_module_type)
   in
   let (_lid, sub_module_type) =
@@ -163,7 +163,8 @@ let try_get_tsig_item f ~loc:_ sig_items elem =
   loop sig_items
 
 let get_type_decl ~loc sig_items parent_lid elem =
-  let select_type elem = function
+  let select_type elem sigi =
+    match Compat.migrate_signature_item sigi with
     | Sig_type (id, type_decl, _) when Ident.name id = elem -> Some type_decl
     | _ -> None
   in
@@ -174,7 +175,8 @@ let get_type_decl ~loc sig_items parent_lid elem =
   | Some decl -> decl
 
 let get_modtype_decl ~loc sig_items parent_lid elem =
-  let select_modtype elem = function
+  let select_modtype elem sigi =
+    match Compat.migrate_signature_item sigi with
     | Sig_modtype (id, type_decl) when Ident.name id = elem -> Some type_decl
     | _ -> None
   in
@@ -184,11 +186,7 @@ let get_modtype_decl ~loc sig_items parent_lid elem =
       elem (string_of_lid parent_lid)
   | Some decl -> decl
 
-let rec longident_of_path path =
-  match path with
-  | Path.Pident id -> Lident (Ident.name id)
-  | Path.Pdot (path, name, _) -> Ldot (longident_of_path path, name)
-  | Path.Papply (lhs, rhs) -> Lapply (longident_of_path lhs, longident_of_path rhs)
+let longident_of_path = Untypeast.lident_of_path
 
 let rec core_type_of_type_expr ~subst type_expr =
   match type_expr.desc with
@@ -386,14 +384,14 @@ let type_declaration ~tool_name mapper type_decl =
     end
   | _ -> default_mapper.type_declaration mapper type_decl
 
-let rec cut_tsig_block_of_rec_types accu tsig =
+let rec cut_tsig_block_of_rec_types accu (tsig : Compat.signature_item_407 list) =
   match tsig with
   | Sig_type (id, ttype_decl, Trec_next) :: rest ->
       cut_tsig_block_of_rec_types ((id, ttype_decl) :: accu) rest
   | _ ->
       (List.rev accu, tsig)
 
-let rec psig_of_tsig ~subst tsig =
+let rec psig_of_tsig ~subst (tsig : Compat.signature_item_407 list) =
   match tsig with
   | Sig_type (id, ttype_decl, rec_flag) :: rest ->
       let accu = [(id, ttype_decl)] in
@@ -459,7 +457,9 @@ let module_type ~tool_name mapper modtype_decl =
           match tmodtype_decl with
           | { mtd_type = Some (Mty_signature tsig) ; _} ->
             let subst = List.map (fun ({ txt ; _ }, typ) -> `Lid txt, typ) subst in
-            let psig  = psig_of_tsig ~subst tsig in
+            let psig =
+              psig_of_tsig ~subst (List.map Compat.migrate_signature_item tsig)
+            in
             { modtype_decl with pmty_desc = Pmty_signature psig }
           | { mtd_type = None ; _ } ->
             raise_errorf ~loc "Imported module is abstract"

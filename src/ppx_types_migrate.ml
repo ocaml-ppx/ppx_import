@@ -28,11 +28,8 @@ let copy_arg_label (l : At.arg_label) : Ab.arg_label =
   | At.Optional x -> Ab.Optional x
 
 (* Here we want to do a hack due to the large type *)
-let copy_attributes (l : Pt.attributes) : Pb.attributes =
+let copy_attributes (attrs : Pt.attributes) : Pb.attributes =
   (* Hack *)
-  let td = Pt.({ ptyp_desc = Ptyp_any
-               ; ptyp_loc = Location.none
-               ; ptyp_attributes = l
-               } ) in
-  let td = IMigrate.copy_core_type td in
-  td.ptyp_attributes
+  let td = Ast_helper.Typ.any ~attrs () in
+  let tb = IMigrate.copy_core_type td in
+  tb.ptyp_attributes

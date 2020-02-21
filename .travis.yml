@@ -1,4 +1,4 @@
-dist: xenial
+dist: bionic
 sudo: required
 language: c
 
@@ -9,11 +9,18 @@ env:
   matrix:
   - OCAML=4.04.2
   - OCAML=4.05.0
+  - OCAML=4.06.0
   - OCAML=4.06.1
+  - OCAML=4.07.0
   - OCAML=4.07.1
+  - OCAML=4.08.0
+  - OCAML=4.08.1
+  - OCAML=4.09.0
+# Wait until ocaml-base-compiler.4.09.1 arrives to opam-repository
+#  - OCAML=4.09.1
 
 script:
-  - sudo curl -sL https://github.com/ocaml/opam/releases/download/2.0.5/opam-2.0.5-x86_64-linux -o /usr/bin/opam
+  - sudo curl -sL https://github.com/ocaml/opam/releases/download/2.0.6/opam-2.0.6-x86_64-linux -o /usr/bin/opam
   - sudo chmod 755 /usr/bin/opam
   - opam init --disable-sandboxing -c $OCAML
   - opam switch set $OCAML
