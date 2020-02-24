@@ -13,8 +13,10 @@ let make_version ~version f_prefix =
 (* List of versions that need special treatment, check is greater or
    equal than. Order is important! *)
 let include_table =
-  [ "types"     , [4,10; 4,8]
-  ; "init_path" , [4,10; 4,9]
+  [ "types_module_type"    , [4,10; 4,8]
+  ; "types_signature_item" , [4,8]
+  ; "init_path"            , [4,9]
+  ; "env_lookup"           , [4,10]
   ]
 
 let rec gen_compat real_version (f_prefix, version_list) =
