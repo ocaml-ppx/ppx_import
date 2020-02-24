@@ -1,3 +1,10 @@
+1.7.1
+-----
+
+  * Support for OCaml 4.10
+    #47
+    (Emilio J. Gallego Arias)
+
 1.7.0
 -----
 
