@@ -7,11 +7,17 @@ let include_ path =
 
 let () =
   let version = Scanf.sscanf Sys.ocaml_version "%d.%d" (fun a b -> (a, b)) in
-  if version >= (4, 8) then
+
+  if version >= (4, 10) then
+    include_ "compat/types_ge_410.ml"
+  else if version >= (4, 8) then
     include_ "compat/types_ge_408.ml"
   else
     include_ "compat/types_lt_408.ml";
-  if version >= (4, 9) then
+
+  if version >= (4, 10) then
+    include_ "compat/init_path_ge_410.ml"
+  else if version >= (4, 9) then
     include_ "compat/init_path_ge_409.ml"
   else
     include_ "compat/init_path_lt_409.ml"

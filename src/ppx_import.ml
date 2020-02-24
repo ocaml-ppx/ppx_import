@@ -55,7 +55,7 @@ let string_of_lid lid =
     | Longident.Lapply (la, lb) -> print la ("(" :: print lb (")" :: acc))
   in String.concat "" (print lid [])
 
-let try_find_module ~loc:_ env lid =
+let try_find_module ~loc env lid =
   (* Note: we are careful to call `Env.lookup_module` and not
      `Typetexp.lookup_module`, because we want to reason precisely
      about the possible failures: we want to handle the case where
@@ -72,7 +72,7 @@ let try_find_module ~loc:_ env lid =
      but better be safe and bundle them in the same try..with.
   *)
   try
-    let path = Env.lookup_module ~load:true lid env in
+    let path = Compat.lookup_module ~loc lid env in
     let module_decl = Env.find_module path env in
     Some module_decl.md_type
   with Not_found -> None
@@ -362,7 +362,7 @@ let type_declaration ~tool_name mapper type_decl =
               (* In this case, we know for sure that the user intends this lident
                  as a type name, so we use Typetexp.find_type and let the failure
                  cases propagate to the user. *)
-              Typetexp.find_type env loc head_id |> snd
+              Compat.find_type env ~loc head_id |> snd
             | Ldot (parent_id, elem) ->
               let sig_items = locate_sig ~loc env parent_id in
               get_type_decl ~loc sig_items parent_id elem
@@ -449,7 +449,7 @@ let module_type ~tool_name mapper modtype_decl =
               (* In this case, we know for sure that the user intends this lident
                  as a module type name, so we use Typetexp.find_type and
                  let the failure cases propagate to the user. *)
-              Typetexp.find_modtype env loc head_id |> snd
+              Compat.find_modtype env ~loc head_id |> snd
             | Longident.Ldot (parent_id, elem) ->
               let sig_items = locate_sig ~loc env parent_id in
               get_modtype_decl ~loc sig_items parent_id elem

@@ -16,6 +16,7 @@ env:
   - OCAML=4.08.0
   - OCAML=4.08.1
   - OCAML=4.09.0
+  - OCAML=4.10.0
 # Wait until ocaml-base-compiler.4.09.1 arrives to opam-repository
 #  - OCAML=4.09.1
 
