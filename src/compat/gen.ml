@@ -5,19 +5,27 @@ let include_ path =
   print_endline s;
   close_in ic
 
+let make_version ~version f_prefix =
+  let major, minor = version in
+  let file = Format.asprintf "%s_ge_%1d%02d.ml" f_prefix major minor in
+  Filename.concat "compat" file
+
+(* List of versions that need special treatment, check is greater or
+   equal than. Order is important! *)
+let include_table =
+  [ "types"     , [4,10; 4,8]
+  ; "init_path" , [4,10; 4,9]
+  ]
+
+let rec gen_compat real_version (f_prefix, version_list) =
+  match version_list with
+  | [] -> include_ (make_version ~version:(0,0) f_prefix)
+  | version :: vlist ->
+    if real_version >= version then
+      include_ (make_version ~version f_prefix)
+    else
+      gen_compat real_version (f_prefix, vlist)
+
 let () =
   let version = Scanf.sscanf Sys.ocaml_version "%d.%d" (fun a b -> (a, b)) in
-
-  if version >= (4, 10) then
-    include_ "compat/types_ge_410.ml"
-  else if version >= (4, 8) then
-    include_ "compat/types_ge_408.ml"
-  else
-    include_ "compat/types_lt_408.ml";
-
-  if version >= (4, 10) then
-    include_ "compat/init_path_ge_410.ml"
-  else if version >= (4, 9) then
-    include_ "compat/init_path_ge_409.ml"
-  else
-    include_ "compat/init_path_lt_409.ml"
+  List.iter (gen_compat version) include_table
