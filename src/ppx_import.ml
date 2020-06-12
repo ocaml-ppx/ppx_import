@@ -405,7 +405,7 @@ let rec psig_of_tsig ~subst (tsig : Compat.signature_item_407 list) =
           (Location.mknoloc (Ident.name id)) ttype_decl) in
       let psig_desc = Psig_type(rec_flag, block) in
       { psig_desc; psig_loc = Location.none } :: psig_of_tsig ~subst rest
-  | Sig_value (id, { val_type; val_kind; val_loc; val_attributes }) :: rest ->
+  | Sig_value (id, { val_type; val_kind; val_loc; val_attributes; _ }) :: rest ->
     let pval_prim =
       match val_kind with
       | Val_reg -> []
