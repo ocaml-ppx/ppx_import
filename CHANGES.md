@@ -1,3 +1,10 @@
+1.7.2
+-----
+
+  * Remove a warning in OCaml 4.11
+    #49
+    (Kate Deplaix)
+
 1.7.1
 -----
 
