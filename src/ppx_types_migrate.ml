@@ -3,11 +3,11 @@ module Pt = Parsetree
 module Ot = Outcometree
 
 open Migrate_parsetree
-module Ab = Ast_408.Asttypes
-module Pb = Ast_408.Parsetree
-module Ob = Ast_408.Outcometree
+module Ab = Ast_409.Asttypes
+module Pb = Ast_409.Parsetree
+module Ob = Ast_409.Outcometree
 
-module IMigrate = Convert(Versions.OCaml_current)(Versions.OCaml_408)
+module IMigrate = Convert(Versions.OCaml_current)(Versions.OCaml_409)
 
 (* copy_mutable_flag / private_flag / arg_label are not exported by
    OMP so not worth the pain of the hack *)

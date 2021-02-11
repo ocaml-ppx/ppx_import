@@ -1,14 +1,14 @@
 (* Don't mask native Outcometree *)
 module Ot = Outcometree
 
-open Ppx_tools_408
+open Ppx_tools_409
 
 open Migrate_parsetree
-open Ast_408.Longident
-open Ast_408.Asttypes
-open Ast_408.Parsetree
-open Ast_408.Ast_mapper
-open Ast_408.Ast_helper
+open Ast_409.Longident
+open Ast_409.Asttypes
+open Ast_409.Parsetree
+open Ast_409.Ast_mapper
+open Ast_409.Ast_helper
 open Types
 
 module Tt = Ppx_types_migrate
@@ -485,7 +485,7 @@ let () =
   (* Position 0 is the default, ppx_import should run pretty early,
      thus using -10 *)
   Driver.register ~name:"ppx_import" ~args:[] ~position:(-10)
-    Versions.ocaml_408 (fun config _cookies ->
+    Versions.ocaml_409 (fun config _cookies ->
         let tool_name = config.tool_name in
         let type_declaration = type_declaration ~tool_name in
         let module_type = module_type ~tool_name in
