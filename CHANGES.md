@@ -1,3 +1,10 @@
+1.8.0
+-----
+
+  * Upgrade the internal AST from 4.07 to 4.11
+    #52
+    (Gabriel Scherer, review by Emilio J. Gallego Arias)
+
 1.7.2
 -----
 
