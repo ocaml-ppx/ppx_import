@@ -5,6 +5,10 @@
     #52
     (Gabriel Scherer, review by Emilio J. Gallego Arias)
 
+  * Update lower bound for `ppx_tools_versioned` and
+    `ocaml-migrate-parsetree` to 4.11 capable versions
+    (Emilio J. Gallego Arias)
+
 1.7.2
 -----
 

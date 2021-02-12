@@ -14,8 +14,8 @@ tags: [ "syntax" ]
 depends: [
   "ocaml"                   {              >= "4.04.2" & < "4.12" }
   "dune"                    {              >= "1.2.0"  }
-  "ppx_tools_versioned"     {              >= "5.2.2"  }
-  "ocaml-migrate-parsetree" {              >= "1.2.0"  }
+  "ppx_tools_versioned"     {              >= "5.4.0"  }
+  "ocaml-migrate-parsetree" {              >= "1.7.0"  }
   "ounit"                   { with-test                }
   "ppx_deriving"            { with-test  & >= "4.2.1"  }
 ]
