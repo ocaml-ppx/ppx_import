@@ -1,14 +1,14 @@
 (* Don't mask native Outcometree *)
 module Ot = Outcometree
 
-open Ppx_tools_407
+open Ppx_tools_411
 
 open Migrate_parsetree
-open Ast_407.Longident
-open Ast_407.Asttypes
-open Ast_407.Parsetree
-open Ast_407.Ast_mapper
-open Ast_407.Ast_helper
+open Ast_411.Longident
+open Ast_411.Asttypes
+open Ast_411.Parsetree
+open Ast_411.Ast_mapper
+open Ast_411.Ast_helper
 open Types
 
 module Tt = Ppx_types_migrate
@@ -224,11 +224,14 @@ let rec core_type_of_type_expr ~subst type_expr =
     let fields =
       row_fields |> List.map (fun (label, row_field) ->
         let label = Location.mknoloc label in
-        match row_field with
-        | Rpresent None -> Rtag (label, [], true, [])
-        | Rpresent (Some ttyp) ->
-          Rtag (label, [], false, [core_type_of_type_expr ~subst ttyp])
-        | _ -> assert false)
+        let desc = match row_field with
+          | Rpresent None -> Rtag (label, true, [])
+          | Rpresent (Some ttyp) ->
+             Rtag (label, false, [core_type_of_type_expr ~subst ttyp])
+          | _ -> assert false
+        in
+        {prf_desc = desc; prf_loc = !default_loc; prf_attributes = [];}
+      )
     in
     Typ.variant fields Closed None
   | _ ->
@@ -306,13 +309,21 @@ let subst_of_manifest { ptyp_attributes; ptyp_loc ; _ } =
   let rec subst_of_expr expr =
     match expr with
     | [%expr [%e? { pexp_desc = Pexp_ident ({ txt = src ; _ }) ; _ }] :=
-             [%e? { pexp_desc = Pexp_ident (dst); pexp_attributes; pexp_loc }]] ->
-      [`Lid src, { ptyp_loc = pexp_loc; ptyp_attributes = pexp_attributes;
-                   ptyp_desc = Ptyp_constr (dst, []) }]
+             [%e? { pexp_desc = Pexp_ident (dst); pexp_attributes; pexp_loc; pexp_loc_stack }]] ->
+      [`Lid src, {
+          ptyp_loc = pexp_loc;
+          ptyp_loc_stack = pexp_loc_stack;
+          ptyp_attributes = pexp_attributes;
+          ptyp_desc = Ptyp_constr (dst, []);
+      }]
     | [%expr [%e? { pexp_desc = Pexp_ident ({ txt = src ; _ }) ; _ }] :=
-             [%e? { pexp_desc = Pexp_ident (dst); pexp_attributes; pexp_loc }]; [%e? rest]] ->
-      (`Lid src, { ptyp_loc = pexp_loc; ptyp_attributes = pexp_attributes;
-                   ptyp_desc = Ptyp_constr (dst, []) }) :: subst_of_expr rest
+             [%e? { pexp_desc = Pexp_ident (dst); pexp_attributes; pexp_loc; pexp_loc_stack; }]; [%e? rest]] ->
+      (`Lid src, {
+         ptyp_loc = pexp_loc;
+         ptyp_loc_stack = pexp_loc_stack;
+         ptyp_attributes = pexp_attributes;
+         ptyp_desc = Ptyp_constr (dst, [])
+      }) :: subst_of_expr rest
     | { pexp_loc ; _ } ->
       raise_errorf ~loc:pexp_loc "Invalid [@with] syntax"
   in
@@ -474,7 +485,7 @@ let () =
   (* Position 0 is the default, ppx_import should run pretty early,
      thus using -10 *)
   Driver.register ~name:"ppx_import" ~args:[] ~position:(-10)
-    Versions.ocaml_407 (fun config _cookies ->
+    Versions.ocaml_411 (fun config _cookies ->
         let tool_name = config.tool_name in
         let type_declaration = type_declaration ~tool_name in
         let module_type = module_type ~tool_name in

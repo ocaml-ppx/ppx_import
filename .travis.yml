@@ -17,7 +17,7 @@ env:
   - OCAML=4.08.1
   - OCAML=4.09.1
   - OCAML=4.10.0
-  - OCAML=4.11.0+trunk
+  - OCAML=4.11.1
 
 script:
   - sudo curl -sL https://github.com/ocaml/opam/releases/download/2.0.6/opam-2.0.6-x86_64-linux -o /usr/bin/opam
