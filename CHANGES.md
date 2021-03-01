@@ -1,3 +1,12 @@
+unreleased
+-----
+
+  * update CI to test OCaml 4.12.0, no changes required
+    (#53, Emilio J. Gallego Arias)
+
+  * remove the OCaml upper bound in the opam file
+    (#53, Emilio J. Gallego Arias, kit-ty-kate)
+
 1.8.0
 -----
 
