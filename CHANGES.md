@@ -1,5 +1,9 @@
 unreleased
 -----
+  * drop support for OCaml `4.04.2`. Minimal supported version is now `4.05.0` #54 (tatchi)
+  
+  * migrate to ppxlib #54 (tatchi)
+
   * bump minimum dune version to 1.11 #56 (tatchi)
 
   * update CI to test OCaml 4.12.0, no changes required

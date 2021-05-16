@@ -13,9 +13,8 @@ tags: [ "syntax" ]
 
 depends: [
   "ocaml"                   {              >= "4.04.2" }
-  "dune"                    {              >= "1.11.0"  }
-  "ppx_tools_versioned"     {              >= "5.4.0"  }
-  "ocaml-migrate-parsetree" {              >= "1.7.0"  }
+  "dune"                    {              >= "1.2.0"  }
+  "ppxlib"                  {              >= "0.22.0"  }
   "ounit"                   { with-test                }
   "ppx_deriving"            { with-test  & >= "4.2.1"  }
   "ppx_sexp_conv"           { with-test  & >= "v0.13.0" }

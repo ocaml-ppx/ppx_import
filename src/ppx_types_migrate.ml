@@ -1,29 +1,23 @@
 module At = Asttypes
-module Pt = Parsetree
-module Ot = Outcometree
-open Migrate_parsetree
-module Ab = Ast_411.Asttypes
-module Pb = Ast_411.Parsetree
-module Ob = Ast_411.Outcometree
-module IMigrate = Convert (Versions.OCaml_current) (Versions.OCaml_411)
+module Conv = Ppxlib_ast.Select_ast (Ppxlib_ast.Compiler_version)
+module To_ppxlib = Conv.Of_ocaml
 
 (* copy_mutable_flag / private_flag / arg_label are not exported by
    OMP so not worth the pain of the hack *)
-let copy_mutable_flag (l : At.mutable_flag) : Ab.mutable_flag =
-  match l with At.Immutable -> Ab.Immutable | At.Mutable -> Ab.Mutable
+let copy_mutable_flag (l : At.mutable_flag) : Ppxlib.mutable_flag =
+  match l with At.Immutable -> Ppxlib.Immutable | At.Mutable -> Ppxlib.Mutable
 
-let copy_private_flag (l : At.private_flag) : Ab.private_flag =
-  match l with At.Private -> Ab.Private | At.Public -> Ab.Public
+let copy_private_flag (l : At.private_flag) : Ppxlib.private_flag =
+  match l with At.Private -> Ppxlib.Private | At.Public -> Ppxlib.Public
 
-let copy_arg_label (l : At.arg_label) : Ab.arg_label =
+let copy_arg_label (l : At.arg_label) : Ppxlib.arg_label =
   match l with
-  | At.Nolabel -> Ab.Nolabel
-  | At.Labelled l -> Ab.Labelled l
-  | At.Optional x -> Ab.Optional x
+  | At.Nolabel -> Ppxlib.Nolabel
+  | At.Labelled l -> Ppxlib.Labelled l
+  | At.Optional x -> Ppxlib.Optional x
 
 (* Here we want to do a hack due to the large type *)
-let copy_attributes (attrs : Pt.attributes) : Pb.attributes =
-  (* Hack *)
+let copy_attributes (attrs : Parsetree.attributes) =
   let td = Ast_helper.Typ.any ~attrs () in
-  let tb = IMigrate.copy_core_type td in
+  let tb = To_ppxlib.copy_core_type td in
   tb.ptyp_attributes

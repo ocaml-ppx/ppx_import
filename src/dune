@@ -2,8 +2,8 @@
  (public_name ppx_import)
  (kind ppx_rewriter)
  (preprocess
-  (pps ppx_tools_versioned.metaquot_411))
- (libraries ppx_tools_versioned ocaml-migrate-parsetree))
+  (pps ppxlib.metaquot))
+ (libraries ppxlib))
 
 (rule
  (deps
