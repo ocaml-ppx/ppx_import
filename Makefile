@@ -7,4 +7,7 @@ test:
 clean:
 	dune clean
 
+fmt:
+	dune build @fmt --auto-promote
+
 .PHONY: build test clean

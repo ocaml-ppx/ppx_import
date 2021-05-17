@@ -1,0 +1,9 @@
+version=0.15.0
+profile=ocamlformat
+module-item-spacing=compact
+sequence-style=terminator
+cases-exp-indent=2
+field-space=loose
+exp-grouping=preserve
+break-cases=fit
+doc-comments=before

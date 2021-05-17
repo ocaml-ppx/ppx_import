@@ -1,5 +1,6 @@
 unreleased
 -----
+  * bump minimum dune version to 1.11 #56 (tatchi)
 
   * update CI to test OCaml 4.12.0, no changes required
     (#53, Emilio J. Gallego Arias)
