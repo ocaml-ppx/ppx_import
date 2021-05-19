@@ -95,9 +95,9 @@ let rec try_open_module_type env module_type =
   | Mty_signature sig_items -> Some sig_items
   | Mty_functor _ -> None
   | Mty_ident path | Mty_alias (_, path) -> (
-    match try Some (Env.find_module path env) with Not_found -> None with
-    | None -> None
-    | Some module_decl -> try_open_module_type env module_decl.md_type )
+    match Env.find_module path env with
+    | exception Not_found -> None
+    | module_decl -> try_open_module_type env module_decl.md_type )
 
 let open_module_type ~loc env lid module_type =
   match try_open_module_type env module_type with
