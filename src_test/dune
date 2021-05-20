@@ -1,4 +1,5 @@
 (test
-  (name test_ppx_import)
-  (preprocess (staged_pps ppx_import ppx_deriving.show))
-  (libraries compiler-libs.common oUnit))
+ (name test_ppx_import)
+ (preprocess
+  (staged_pps ppx_import ppx_deriving.show))
+ (libraries compiler-libs.common oUnit))

@@ -1,12 +1,15 @@
 (library
  (public_name ppx_import)
  (kind ppx_rewriter)
- (preprocess (pps ppx_tools_versioned.metaquot_411))
- (libraries ppx_tools_versioned
-            ocaml-migrate-parsetree))
+ (preprocess
+  (pps ppx_tools_versioned.metaquot_411))
+ (libraries ppx_tools_versioned ocaml-migrate-parsetree))
 
 (rule
- (deps (glob_files compat/*.ml))
+ (deps
+  (glob_files compat/*.ml))
  (targets compat.ml)
  (action
-  (with-stdout-to %{targets} (run ./compat/gen.exe))))
+  (with-stdout-to
+   %{targets}
+   (run ./compat/gen.exe))))

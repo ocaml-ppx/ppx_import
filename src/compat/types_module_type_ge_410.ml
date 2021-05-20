@@ -7,10 +7,10 @@ type module_type_407 =
 let migrate_module_type : Types.module_type -> module_type_407 = function
   | Mty_ident p -> Mty_ident p
   | Mty_signature s -> Mty_signature s
-  | Mty_functor (fp, mt) ->
-    (match fp with
-     | Unit -> Mty_functor(Ident.create_local "_", None, mt)
-     | Named(i,mt) ->
-       let i = (match i with None -> Ident.create_local "_" | Some i -> i) in
-       Mty_functor (i, Some mt, mt))
+  | Mty_functor (fp, mt) -> (
+    match fp with
+    | Unit -> Mty_functor (Ident.create_local "_", None, mt)
+    | Named (i, mt) ->
+      let i = match i with None -> Ident.create_local "_" | Some i -> i in
+      Mty_functor (i, Some mt, mt) )
   | Mty_alias p -> Mty_alias ((), p)
