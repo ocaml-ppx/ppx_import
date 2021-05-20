@@ -1,0 +1,51 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          # - macos-latest
+          # - windows-latest
+        ocaml-compiler:
+          - 4.04.2
+          - 4.05.0
+          - 4.06.0
+          - 4.06.1
+          - 4.07.0
+          - 4.07.1
+          - 4.08.0
+          - 4.08.1
+          - 4.09.1
+          - 4.10.0
+          - 4.11.1
+          - 4.12.0
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Use OCaml ${{ matrix.ocaml-compiler }}
+        uses: avsm/setup-ocaml@v2
+        with:
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+          dune-cache: ${{ matrix.os != 'macos-latest' }}
+
+      - name: Install opam packages
+        run: opam install . --deps-only --yes --with-test
+
+      - name: Run build
+        run: opam exec -- make build
+
+      - name: Run tests
+        run: opam exec -- make test
