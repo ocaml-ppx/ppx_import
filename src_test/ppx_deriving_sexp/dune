@@ -1,0 +1,4 @@
+(test
+ (name test_ppx_deriving_sexp)
+ (preprocess
+  (staged_pps ppx_import ppx_sexp_conv)))
