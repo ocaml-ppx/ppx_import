@@ -18,6 +18,7 @@ depends: [
   "ocaml-migrate-parsetree" {              >= "1.7.0"  }
   "ounit"                   { with-test                }
   "ppx_deriving"            { with-test  & >= "4.2.1"  }
+  "ppx_sexp_conv"           { with-test  & >= "v0.13.0" }
 ]
 
 build:      [["dune" "build"   "-p" name "-j" jobs]
