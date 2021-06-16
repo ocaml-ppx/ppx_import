@@ -77,9 +77,9 @@ For module types, the replacements are specified using the standard `with` const
 
 ### More?
 
-If you have a use case in mind that _ppx_import_ does not cover (in particular, object-oriented features are not implemented), please [open an issue](https://github.com/whitequark/ppx_import/issues/new).
+If you have a use case in mind that _ppx_import_ does not cover (in particular, object-oriented features are not implemented), please [open an issue](https://github.com/ocaml-ppx/ppx_import/issues/new).
 
 License
 -------
 
-_import_ is distributed under the terms of [MIT license](LICENSE.txt).
+_import_ is distributed under the terms of [MIT license](LICENSE.md).
