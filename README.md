@@ -82,4 +82,4 @@ If you have a use case in mind that _ppx_import_ does not cover (in particular, 
 License
 -------
 
-_import_ is distributed under the terms of [MIT license](LICENSE.txt).
+_import_ is distributed under the terms of [MIT license](LICENSE.md).
