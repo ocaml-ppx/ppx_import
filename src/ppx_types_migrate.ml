@@ -1,6 +1,4 @@
 module At = Asttypes
-module Conv = Ppxlib_ast.Select_ast (Ppxlib_ast.Compiler_version)
-module To_ppxlib = Conv.Of_ocaml
 
 (* copy_mutable_flag / private_flag / arg_label are not exported by
    Ppxlib so not worth the pain of the hack *)
@@ -19,5 +17,5 @@ let copy_arg_label (l : At.arg_label) : Ppxlib.arg_label =
 (* Here we want to do a hack due to the large type *)
 let copy_attributes (attrs : Parsetree.attributes) =
   let td = Ast_helper.Typ.any ~attrs () in
-  let tb = To_ppxlib.copy_core_type td in
+  let tb = Ppxlib_ast.Selected_ast.Of_ocaml.copy_core_type td in
   tb.ptyp_attributes
