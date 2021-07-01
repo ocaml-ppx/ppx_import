@@ -3,7 +3,7 @@ module Conv = Ppxlib_ast.Select_ast (Ppxlib_ast.Compiler_version)
 module To_ppxlib = Conv.Of_ocaml
 
 (* copy_mutable_flag / private_flag / arg_label are not exported by
-   OMP so not worth the pain of the hack *)
+   Ppxlib so not worth the pain of the hack *)
 let copy_mutable_flag (l : At.mutable_flag) : Ppxlib.mutable_flag =
   match l with At.Immutable -> Ppxlib.Immutable | At.Mutable -> Ppxlib.Mutable
 
