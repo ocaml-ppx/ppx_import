@@ -356,7 +356,7 @@ let is_self_reference lid =
   in
   match lid with
   | Ppxlib.Ldot _ ->
-    let mn = Longident.flatten lid |> List.hd |> uncapitalize in
+    let mn = Ppxlib.Longident.flatten_exn lid |> List.hd |> uncapitalize in
     fn = mn
   | _ -> false
 
