@@ -167,6 +167,9 @@ let get_modtype_decl ~loc sig_items parent_lid elem =
 
 let longident_of_path = Untypeast.lident_of_path
 
+let mknoloc (txt : 'a) : 'a Ppxlib.Location.loc =
+  {txt; loc = Ppxlib.Location.none}
+
 let rec core_type_of_type_expr ~subst (type_expr : Ocaml_common.Types.type_expr)
     : Ppxlib.core_type =
   match type_expr.desc with
@@ -202,7 +205,7 @@ let rec core_type_of_type_expr ~subst (type_expr : Ocaml_common.Types.type_expr)
     let fields =
       row_fields
       |> List.map (fun (label, row_field) ->
-             let label = Ocaml_common.Location.mknoloc label in
+             let label = mknoloc label in
              let desc =
                match row_field with
                | Types.Rpresent None -> Ppxlib.Rtag (label, true, [])
@@ -437,7 +440,7 @@ let rec psig_of_tsig ~subst (tsig : Compat.signature_item_407 list) :
       block
       |> List.map (fun (id, ttype_decl) ->
              ptype_decl_of_ttype_decl ~manifest:None ~subst
-               (Ocaml_common.Location.mknoloc (Ocaml_common.Ident.name id))
+               (mknoloc (Ocaml_common.Ident.name id))
                ttype_decl)
     in
     let psig_desc = Psig_type (rec_flag, block) in
@@ -460,8 +463,7 @@ let rec psig_of_tsig ~subst (tsig : Compat.signature_item_407 list) :
     in
     { psig_desc =
         Psig_value
-          { pval_name =
-              Ocaml_common.Location.mknoloc (Ocaml_common.Ident.name id)
+          { pval_name = mknoloc (Ocaml_common.Ident.name id)
           ; pval_loc = val_loc
           ; pval_attributes = Tt.copy_attributes val_attributes
           ; pval_prim
