@@ -539,5 +539,10 @@ let mapper =
   end
 
 let () =
-  Ppxlib.Driver.V2.register_transformation ~rules:[] ~impl:mapper#structure
-    "ppx_import"
+  let open Ppxlib.Driver in
+  (* Currently, ppxlib only provides a way to specify when a rewriter should be applied
+     (with respect to other rewriters), if the rewriter is an instrumentation. *)
+  let temporary_hack =
+    Instrument.V2.make mapper#structure ~position:Instrument.Before
+  in
+  V2.register_transformation ~rules:[] ~instrument:temporary_hack "ppx_import"
