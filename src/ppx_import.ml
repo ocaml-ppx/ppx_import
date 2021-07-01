@@ -349,10 +349,9 @@ let subst_of_manifest ({ptyp_attributes; ptyp_loc; _} : Ppxlib.core_type) =
 
 let uncapitalize = String.uncapitalize_ascii
 
-let is_self_reference lid =
+let is_self_reference ~input_name lid =
   let fn =
-    !Location.input_name |> Filename.basename |> Filename.chop_extension
-    |> uncapitalize
+    input_name |> Filename.basename |> Filename.chop_extension |> uncapitalize
   in
   match lid with
   | Ppxlib.Ldot _ ->
@@ -360,7 +359,8 @@ let is_self_reference lid =
     fn = mn
   | _ -> false
 
-let type_declaration ~tool_name (type_decl : Ppxlib.type_declaration) =
+let type_declaration ~tool_name ~input_name
+    (type_decl : Ppxlib.type_declaration) =
   let open Ppxlib in
   match type_decl with
   | { ptype_attributes
@@ -372,7 +372,8 @@ let type_declaration ~tool_name (type_decl : Ppxlib.type_declaration) =
     | PTyp ({ptyp_desc = Ptyp_constr ({txt = lid; loc}, _); _} as manifest) ->
       if tool_name = "ocamldep" then
         (* Just put it as manifest *)
-        if is_self_reference lid then {type_decl with ptype_manifest = None}
+        if is_self_reference ~input_name lid then
+          {type_decl with ptype_manifest = None}
         else {type_decl with ptype_manifest = Some manifest}
       else
         Ast_helper.with_default_loc loc (fun () ->
@@ -393,7 +394,7 @@ let type_declaration ~tool_name (type_decl : Ppxlib.type_declaration) =
                 get_type_decl ~loc sig_items parent_id elem
             in
             let m, s =
-              if is_self_reference lid then (None, [])
+              if is_self_reference ~input_name lid then (None, [])
               else
                 let subst = subst_of_manifest manifest in
                 let subst =
@@ -470,7 +471,7 @@ let rec psig_of_tsig ~subst (tsig : Compat.signature_item_407 list) :
   | [] -> []
   | _ -> assert false
 
-let module_type ~tool_name (modtype_decl : Ppxlib.module_type) =
+let module_type ~tool_name ~input_name (modtype_decl : Ppxlib.module_type) =
   let open Ppxlib in
   match modtype_decl with
   | { pmty_attributes = _
@@ -479,7 +480,7 @@ let module_type ~tool_name (modtype_decl : Ppxlib.module_type) =
     match payload with
     | PTyp {ptyp_desc = Ptyp_package (({txt = lid; loc} as alias), subst); _} ->
       if tool_name = "ocamldep" then
-        if is_self_reference lid then
+        if is_self_reference ~input_name lid then
           (* Create a dummy module type to break the circular dependency *)
           {modtype_decl with pmty_desc = Pmty_signature []}
         else
@@ -527,13 +528,15 @@ let mapper =
 
     method! module_type ctxt modtype_decl =
       let tool_name = Ppxlib.Expansion_context.Base.tool_name ctxt in
+      let input_name = Ppxlib.Expansion_context.Base.input_name ctxt in
       let modtype_decl = super#module_type ctxt modtype_decl in
-      module_type ~tool_name modtype_decl
+      module_type ~tool_name ~input_name modtype_decl
 
     method! type_declaration ctxt type_decl =
       let tool_name = Ppxlib.Expansion_context.Base.tool_name ctxt in
+      let input_name = Ppxlib.Expansion_context.Base.input_name ctxt in
       let type_decl = super#type_declaration ctxt type_decl in
-      type_declaration ~tool_name type_decl
+      type_declaration ~tool_name ~input_name type_decl
   end
 
 let () =
