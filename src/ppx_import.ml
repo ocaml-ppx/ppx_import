@@ -92,7 +92,6 @@ let open_module_type ~loc env lid module_type =
       (string_of_lid lid)
 
 let locate_sig ~loc env lid =
-  let open Ocaml_common in
   let head, path =
     match Ppxlib.Longident.flatten_exn lid with
     | head :: path -> (Longident.Lident head, path)
@@ -143,7 +142,6 @@ let try_get_tsig_item f ~loc:_ sig_items elem =
   loop sig_items
 
 let get_type_decl ~loc sig_items parent_lid elem =
-  let open Ocaml_common in
   let select_type elem sigi =
     match Compat.migrate_signature_item sigi with
     | Sig_type (id, type_decl, _) when Ident.name id = elem -> Some type_decl
