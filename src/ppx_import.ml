@@ -1,4 +1,3 @@
-module Ot = Outcometree
 module Tt = Ppx_types_migrate
 
 let lazy_env =
@@ -450,15 +449,8 @@ let rec psig_of_tsig ~subst (tsig : Compat.signature_item_407 list) :
       match val_kind with
       | Val_reg -> []
       | Val_prim p ->
-        let oval =
-          Ot.
-            { oval_name = ""
-            ; oval_type = Otyp_abstract
-            ; oval_prims = []
-            ; oval_attributes = [] }
-        in
-        let oval = Ocaml_common.Primitive.print p oval in
-        oval.Ot.oval_prims
+        if p.prim_native_name <> "" then [p.prim_name; p.prim_native_name]
+        else [p.prim_name]
       | _ -> assert false
     in
     { psig_desc =
