@@ -19,6 +19,7 @@ module type S_rec = [%import: (module Stuff.S_rec)]
 let test_constr _ctxt =
   ignore [A1; A2 "a"];
   ignore (Stuff.A1 = A1);
+  ignore (Test_intf.A1 = A1);
   ignore {b1 = A1; b2 = "x"; b3 = Int64.zero};
   ignore (`A : c);
   ignore (Int64.zero : d);
