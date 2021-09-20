@@ -465,79 +465,72 @@ let rec psig_of_tsig ~subst (tsig : Compat.signature_item_407 list) :
   | [] -> []
   | _ -> assert false
 
-let module_type ~tool_name ~input_name (modtype_decl : Ppxlib.module_type) =
+let module_type ~tool_name ~input_name
+    (package_type : Ppxlib__Import.package_type) =
   let open Ppxlib in
-  match modtype_decl with
-  | { pmty_attributes = _
-    ; pmty_desc = Pmty_extension ({txt = "import"; loc}, payload)
-    ; _ } -> (
-    match payload with
-    | PTyp {ptyp_desc = Ptyp_package (({txt = lid; loc} as alias), subst); _} ->
-      if tool_name = "ocamldep" then
-        if is_self_reference ~input_name lid then
-          (* Create a dummy module type to break the circular dependency *)
-          {modtype_decl with pmty_desc = Pmty_signature []}
-        else
-          (* Just put it as alias *)
-          {modtype_decl with pmty_desc = Pmty_alias alias}
-      else
-        Ppxlib.Ast_helper.with_default_loc loc (fun () ->
-            let env = Lazy.force lazy_env in
-            let tmodtype_decl =
-              match lid with
-              | Longident.Lapply _ ->
-                Location.raise_errorf ~loc
-                  "[%%import] cannot import a functor application %s"
-                  (string_of_lid lid)
-              | Longident.Lident _ as head_id ->
-                (* In this case, we know for sure that the user intends this lident
-                   as a module type name, so we use Typetexp.find_type and
-                   let the failure cases propagate to the user. *)
-                Compat.find_modtype env ~loc head_id |> snd
-              | Longident.Ldot (parent_id, elem) ->
-                let sig_items = locate_sig ~loc env parent_id in
-                get_modtype_decl ~loc sig_items parent_id elem
-            in
-            match tmodtype_decl with
-            | {mtd_type = Some (Mty_signature tsig); _} ->
-              let subst =
-                List.map (fun ({txt; _}, typ) -> (`Lid txt, typ)) subst
-              in
-              let psig =
-                psig_of_tsig ~subst
-                  (List.map Compat.migrate_signature_item tsig)
-              in
-              {modtype_decl with pmty_desc = Pmty_signature psig}
-            | {mtd_type = None; _} ->
-              Location.raise_errorf ~loc "Imported module is abstract"
-            | _ ->
-              Location.raise_errorf ~loc "Imported module is indirectly defined")
-    | _ -> Location.raise_errorf ~loc "Invalid [%%import] syntax" )
-  | _ -> modtype_decl
+  let ({txt = lid; loc} as alias), subst = package_type in
+  if tool_name = "ocamldep" then
+    if is_self_reference ~input_name lid then
+      (* Create a dummy module type to break the circular dependency *)
+      Ast_helper.Mty.mk ~attrs:[] (Pmty_signature [])
+    else
+      (* Just put it as alias *)
+      Ast_helper.Mty.mk ~attrs:[] (Pmty_alias alias)
+  else
+    Ppxlib.Ast_helper.with_default_loc loc (fun () ->
+        let env = Lazy.force lazy_env in
+        let tmodtype_decl =
+          match lid with
+          | Longident.Lapply _ ->
+            Location.raise_errorf ~loc
+              "[%%import] cannot import a functor application %s"
+              (string_of_lid lid)
+          | Longident.Lident _ as head_id ->
+            (* In this case, we know for sure that the user intends this lident
+               as a module type name, so we use Typetexp.find_type and
+               let the failure cases propagate to the user. *)
+            Compat.find_modtype env ~loc head_id |> snd
+          | Longident.Ldot (parent_id, elem) ->
+            let sig_items = locate_sig ~loc env parent_id in
+            get_modtype_decl ~loc sig_items parent_id elem
+        in
+        match tmodtype_decl with
+        | {mtd_type = Some (Mty_signature tsig); _} ->
+          let subst = List.map (fun ({txt; _}, typ) -> (`Lid txt, typ)) subst in
+          let psig =
+            psig_of_tsig ~subst (List.map Compat.migrate_signature_item tsig)
+          in
+          Ast_helper.Mty.mk ~attrs:[] (Pmty_signature psig)
+        | {mtd_type = None; _} ->
+          Location.raise_errorf ~loc "Imported module is abstract"
+        | _ ->
+          Location.raise_errorf ~loc "Imported module is indirectly defined")
 
-let mapper =
-  let open Ppxlib in
-  object
-    inherit [Expansion_context.Base.t] Ast_traverse.map_with_context as super
+let type_declaration_expand ~ctxt type_decl =
+  let tool_name = Ppxlib.Expansion_context.Extension.tool_name ctxt in
+  let input_name = Ppxlib.Expansion_context.Extension.input_name ctxt in
+  type_declaration ~tool_name ~input_name type_decl
 
-    method! module_type ctxt modtype_decl =
-      let tool_name = Ppxlib.Expansion_context.Base.tool_name ctxt in
-      let input_name = Ppxlib.Expansion_context.Base.input_name ctxt in
-      let modtype_decl = super#module_type ctxt modtype_decl in
-      module_type ~tool_name ~input_name modtype_decl
+let module_declaration_expand ~ctxt package_type =
+  let tool_name = Ppxlib.Expansion_context.Extension.tool_name ctxt in
+  let input_name = Ppxlib.Expansion_context.Extension.input_name ctxt in
+  module_type ~tool_name ~input_name package_type
 
-    method! type_declaration ctxt type_decl =
-      let tool_name = Ppxlib.Expansion_context.Base.tool_name ctxt in
-      let input_name = Ppxlib.Expansion_context.Base.input_name ctxt in
-      let type_decl = super#type_declaration ctxt type_decl in
-      type_declaration ~tool_name ~input_name type_decl
-  end
+let type_declaration_extension =
+  Ppxlib.Extension.__declare_ppx_import "import" type_declaration_expand
+
+let module_declaration_extension =
+  Ppxlib.Extension.V3.declare "import" Ppxlib.Extension.Context.module_type
+    Ppxlib.Ast_pattern.(ptyp (ptyp_package __))
+    module_declaration_expand
+
+let type_declaration_rule =
+  Ppxlib.Context_free.Rule.extension type_declaration_extension
+
+let module_declaration_rule =
+  Ppxlib.Context_free.Rule.extension module_declaration_extension
 
 let () =
-  let open Ppxlib.Driver in
-  (* Currently, ppxlib only provides a way to specify when a rewriter should be applied
-     (with respect to other rewriters), if the rewriter is an instrumentation. *)
-  let temporary_hack =
-    Instrument.V2.make mapper#structure ~position:Instrument.Before
-  in
-  V2.register_transformation ~rules:[] ~instrument:temporary_hack "ppx_import"
+  Ppxlib.Driver.register_transformation
+    ~rules:[type_declaration_rule; module_declaration_rule]
+    "ppx_import"

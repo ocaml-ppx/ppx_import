@@ -20,6 +20,13 @@ depends: [
   "ppx_sexp_conv"           { with-test  & >= "v0.13.0" }
 ]
 
+pin-depends: [
+  [
+     "ppxlib.0.23.0"
+     "git+https://github.com/tatchi/ppxlib#input_name"
+  ]
+]
+
 build:      [["dune" "build"   "-p" name "-j" jobs]
              ["dune" "runtest" "-p" name "-j" jobs] { with-test }
             ]
