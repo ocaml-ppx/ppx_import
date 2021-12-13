@@ -466,7 +466,7 @@ let rec psig_of_tsig ~subst (tsig : Compat.signature_item_407 list) :
   | _ -> assert false
 
 let module_type ~tool_name ~input_name
-    (package_type : Ppxlib__Import.package_type) =
+    (package_type : Ppxlib.package_type) =
   let open Ppxlib in
   let ({txt = lid; loc} as alias), subst = package_type in
   if tool_name = "ocamldep" then
