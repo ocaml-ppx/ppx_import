@@ -267,7 +267,7 @@ let ptype_decl_of_ttype_decl ~manifest ~subst ptype_name
             ; pld_attributes = Tt.copy_attributes ld.ld_attributes })
     in
     Ppxlib.(
-      match ttype_decl.type_kind with
+      match Compat.migrate_type_kind ttype_decl.type_kind with
       | Type_abstract -> Ptype_abstract
       | Type_open -> Ptype_open
       | Type_record (labels, _) -> Ptype_record (map_labels labels)
