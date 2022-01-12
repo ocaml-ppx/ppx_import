@@ -1,15 +1,16 @@
-unreleased
+1.9.0
 -----
-  * drop support for OCaml `4.04.2`. Minimal supported version is now `4.05.0` #54 (tatchi)
 
-  * migrate to ppxlib #54 , closes #44 (tatchi)
+  * Migrate to ppxlib #54 , closes #44 (tatchi)
 
-  * bump minimum dune version to 1.11 #56 (tatchi)
+  * Drop support for OCaml `4.04.2`. Minimal supported version is now `4.05.0` #54 (tatchi)
 
-  * update CI to test OCaml 4.12.0, no changes required
+  * Bump minimum dune version to 1.11 #56 (tatchi)
+
+  * Update CI to test OCaml 4.12.0, no changes required
     (#53, Emilio J. Gallego Arias)
 
-  * remove the OCaml upper bound in the opam file
+  * Remove the OCaml upper bound in the opam file
     (#53, Emilio J. Gallego Arias, kit-ty-kate)
 
 1.8.0
