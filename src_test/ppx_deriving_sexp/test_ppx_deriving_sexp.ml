@@ -1,6 +1,4 @@
-type sorts =
-  [%import: Sorts.family]
-  [@@deriving sexp]
+type sorts = [%import: Sorts.family] [@@deriving sexp]
 
 let main () =
   let test = Sorts.InType in
