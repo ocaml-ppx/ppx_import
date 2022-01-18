@@ -47,7 +47,7 @@ type package_type =
       core_type := (Parsetree.core_type [@printer Pprintast.core_type]);
       Asttypes.loc :=
         (Asttypes.loc [@polyprinter fun pp fmt x -> pp fmt x.Asttypes.txt]);
-      Longident.t := (Longident.t [@printer pp_longident])])]
+      Longident.t := (Longident.t [@printer pp_longident])] )]
 [@@deriving show]
 
 module type Hashable = [%import: (module Hashtbl.HashedType)]

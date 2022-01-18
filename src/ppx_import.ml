@@ -215,7 +215,7 @@ let rec core_type_of_type_expr ~subst (type_expr : Ocaml_common.Types.type_expr)
              Ppxlib.
                { prf_desc = desc
                ; prf_loc = !Ppxlib.Ast_helper.default_loc
-               ; prf_attributes = [] })
+               ; prf_attributes = [] } )
     in
     Ppxlib.Ast_helper.Typ.variant fields Closed None
   | _ -> assert false
@@ -235,7 +235,7 @@ let ptype_decl_of_ttype_decl ~manifest ~subst ptype_name
             match tparam with
             | {desc = Tvar (Some var); _} -> [(`Var var, pparam)]
             | {desc = Tvar None; _} -> []
-            | _ -> assert false)
+            | _ -> assert false )
           ttype_decl.type_params ptype_args
         |> List.concat
       with Invalid_argument _ ->
@@ -253,7 +253,7 @@ let ptype_decl_of_ttype_decl ~manifest ~subst ptype_name
         , (* The equivalent of not specifying the variance explicitly.
              Since the very purpose of ppx_import is to include the full definition,
              it should always be sufficient to rely on the inferencer to deduce variance. *)
-          (Ppxlib.Asttypes.NoVariance, Ppxlib.Asttypes.NoInjectivity) ))
+          (Ppxlib.Asttypes.NoVariance, Ppxlib.Asttypes.NoInjectivity) ) )
       ttype_decl.type_params ttype_decl.type_variance
   and ptype_kind =
     let map_labels =
@@ -264,7 +264,7 @@ let ptype_decl_of_ttype_decl ~manifest ~subst ptype_name
             ; pld_mutable = Tt.copy_mutable_flag ld.ld_mutable
             ; pld_type = core_type_of_type_expr ~subst ld.ld_type
             ; pld_loc = ld.ld_loc
-            ; pld_attributes = Tt.copy_attributes ld.ld_attributes })
+            ; pld_attributes = Tt.copy_attributes ld.ld_attributes } )
     in
     Ppxlib.(
       match Compat.migrate_type_kind ttype_decl.type_kind with
@@ -291,7 +291,7 @@ let ptype_decl_of_ttype_decl ~manifest ~subst ptype_name
                  ; pcd_args = map_args cd.cd_args
                  ; pcd_res
                  ; pcd_loc = cd.cd_loc
-                 ; pcd_attributes = Tt.copy_attributes cd.cd_attributes }) ))
+                 ; pcd_attributes = Tt.copy_attributes cd.cd_attributes } ) ))
   and ptype_manifest =
     match ttype_decl.type_manifest with
     | Some typ -> Some (core_type_of_type_expr ~subst typ)
@@ -361,8 +361,8 @@ let is_self_reference ~input_name lid =
     fn = mn
   | _ -> false
 
-let type_declaration ~tool_name ~input_name
-    (type_decl : Ppxlib.type_declaration) =
+let type_declaration ~tool_name ~input_name (type_decl : Ppxlib.type_declaration)
+    =
   let open Ppxlib in
   match type_decl with
   | { ptype_attributes
@@ -412,7 +412,7 @@ let type_declaration ~tool_name ~input_name
               ptype_decl_of_ttype_decl ~manifest:m ~subst:s ptype_name
                 ttype_decl
             in
-            {ptype_decl with ptype_attributes})
+            {ptype_decl with ptype_attributes} )
     | _ -> Location.raise_errorf ~loc "Invalid [%%import] syntax" )
   | _ -> type_decl
 
@@ -440,7 +440,7 @@ let rec psig_of_tsig ~subst (tsig : Compat.signature_item_407 list) :
       |> List.map (fun (id, ttype_decl) ->
              ptype_decl_of_ttype_decl ~manifest:None ~subst
                (mknoloc (Ocaml_common.Ident.name id))
-               ttype_decl)
+               ttype_decl )
     in
     let psig_desc = Psig_type (rec_flag, block) in
     {psig_desc; psig_loc = Location.none} :: psig_of_tsig ~subst rest
@@ -465,16 +465,14 @@ let rec psig_of_tsig ~subst (tsig : Compat.signature_item_407 list) :
   | [] -> []
   | _ -> assert false
 
-let module_type ~tool_name ~input_name
-    (package_type : Ppxlib.package_type) =
+let module_type ~tool_name ~input_name (package_type : Ppxlib.package_type) =
   let open Ppxlib in
   let ({txt = lid; loc} as alias), subst = package_type in
   if tool_name = "ocamldep" then
     if is_self_reference ~input_name lid then
       (* Create a dummy module type to break the circular dependency *)
       Ast_helper.Mty.mk ~attrs:[] (Pmty_signature [])
-    else
-      (* Just put it as alias *)
+    else (* Just put it as alias *)
       Ast_helper.Mty.mk ~attrs:[] (Pmty_alias alias)
   else
     Ppxlib.Ast_helper.with_default_loc loc (fun () ->
@@ -504,7 +502,7 @@ let module_type ~tool_name ~input_name
         | {mtd_type = None; _} ->
           Location.raise_errorf ~loc "Imported module is abstract"
         | _ ->
-          Location.raise_errorf ~loc "Imported module is indirectly defined")
+          Location.raise_errorf ~loc "Imported module is indirectly defined" )
 
 let type_declaration_expand ~ctxt type_decl =
   let tool_name = Ppxlib.Expansion_context.Extension.tool_name ctxt in
