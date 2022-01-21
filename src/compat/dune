@@ -1,2 +1,3 @@
 (executable
- (name gen))
+ (name gen)
+ (modules gen))
