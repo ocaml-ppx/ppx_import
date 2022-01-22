@@ -171,7 +171,7 @@ let mknoloc (txt : 'a) : 'a Ppxlib.Location.loc =
 
 let rec core_type_of_type_expr ~subst (type_expr : Ocaml_common.Types.type_expr)
     : Ppxlib.core_type =
-  match type_expr.desc with
+  match Compat.get_desc type_expr with
   | Tvar None -> Ppxlib.Ast_helper.Typ.any ()
   | Tvar (Some var) -> (
     match List.assoc (`Var var) subst with
@@ -200,13 +200,13 @@ let rec core_type_of_type_expr ~subst (type_expr : Ocaml_common.Types.type_expr)
       Ppxlib.Ast_helper.Typ.constr
         {txt = longident_of_path path; loc = !Ppxlib.Ast_helper.default_loc}
         args )
-  | Tvariant {row_fields; _} ->
+  | Tvariant row_desc ->
     let fields =
-      row_fields
+      Compat.row_fields row_desc
       |> List.map (fun (label, row_field) ->
              let label = mknoloc label in
              let desc =
-               match row_field with
+               match Compat.row_field_repr row_field with
                | Types.Rpresent None -> Ppxlib.Rtag (label, true, [])
                | Types.Rpresent (Some ttyp) ->
                  Ppxlib.Rtag (label, false, [core_type_of_type_expr ~subst ttyp])
@@ -232,9 +232,9 @@ let ptype_decl_of_ttype_decl ~manifest ~subst ptype_name
       try
         List.map2
           (fun (tparam : Ocaml_common.Types.type_expr) pparam ->
-            match tparam with
-            | {desc = Tvar (Some var); _} -> [(`Var var, pparam)]
-            | {desc = Tvar None; _} -> []
+            match Compat.get_desc tparam with
+            | Tvar (Some var) -> [(`Var var, pparam)]
+            | Tvar None -> []
             | _ -> assert false )
           ttype_decl.type_params ptype_args
         |> List.concat
