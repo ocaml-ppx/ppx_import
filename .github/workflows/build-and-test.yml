@@ -25,7 +25,7 @@ jobs:
           - 4.11.x
           - 4.12.x
           - 4.13.x
-          - 4.14.x
+          - ocaml-base-compiler.4.14.0~alpha1
 
     runs-on: ${{ matrix.os }}
 
@@ -38,6 +38,9 @@ jobs:
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
           dune-cache: ${{ matrix.os != 'macos-latest' }}
+          opam-repositories: |
+            default: https://github.com/ocaml/opam-repository.git
+            beta: https://github.com/ocaml/ocaml-beta-repository.git
 
       - name: Install opam packages
         run: opam install . --deps-only --yes --with-test
