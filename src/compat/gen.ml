@@ -16,7 +16,8 @@ let include_table =
   ; ("types_signature_item", [(4, 8)])
   ; ("types_type_kind", [(4, 13)])
   ; ("init_path", [(4, 9)])
-  ; ("env_lookup", [(4, 10)]) ]
+  ; ("env_lookup", [(4, 10)])
+  ; ("types_desc", [(4, 14)]) ]
 
 let rec gen_compat real_version (f_prefix, version_list) =
   match version_list with

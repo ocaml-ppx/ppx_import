@@ -16,19 +16,16 @@ jobs:
           # - macos-latest
           # - windows-latest
         ocaml-compiler:
-          - 4.05.0
-          - 4.06.0
-          - 4.06.1
-          - 4.07.0
-          - 4.07.1
-          - 4.08.0
-          - 4.08.1
-          - 4.09.1
-          - 4.10.0
-          - 4.11.1
-          - 4.12.0
-          - 4.13.0
-          - 4.13.1
+          - 4.05.x
+          - 4.06.x
+          - 4.07.x
+          - 4.08.x
+          - 4.09.x
+          - 4.10.x
+          - 4.11.x
+          - 4.12.x
+          - 4.13.x
+          - ocaml-base-compiler.4.14.0~alpha1
 
     runs-on: ${{ matrix.os }}
 
@@ -37,10 +34,13 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
-        uses: avsm/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v2
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
           dune-cache: ${{ matrix.os != 'macos-latest' }}
+          opam-repositories: |
+            default: https://github.com/ocaml/opam-repository.git
+            beta: https://github.com/ocaml/ocaml-beta-repository.git
 
       - name: Install opam packages
         run: opam install . --deps-only --yes --with-test
