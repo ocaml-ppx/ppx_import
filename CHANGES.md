@@ -1,3 +1,8 @@
+1.9.1
+-----
+
+  * Support for OCaml 4.14 (#67 kit-ty-kate)
+
 1.9.0
 -----
 
