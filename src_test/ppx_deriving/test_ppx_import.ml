@@ -1,18 +1,18 @@
 open OUnit2
 
-type a = [%import: Stuff.a]
-type b = [%import: Stuff.b]
-type c = [%import: Stuff.c]
-type d = [%import: Stuff.d]
-type e = [%import: Stuff.e]
-type f = [%import: Stuff.S.f]
-type 'a g = [%import: 'a Stuff.g]
-type 'b g' = [%import: 'b Stuff.g]
-type h = [%import: Stuff.h]
+[%%import: type a = Stuff.a]
+[%%import: type b = Stuff.b]
+[%%import: type c = Stuff.c]
+[%%import: type d = Stuff.d]
+[%%import: type e = Stuff.e]
+[%%import: type f = Stuff.S.f]
+[%%import: type 'a g = 'a Stuff.g]
+[%%import: type 'b g' = 'b Stuff.g]
+[%%import: type h = Stuff.h]
 
 module MI = Stuff.MI
 
-type i = [%import: Stuff.i]
+[%%import: type i = Stuff.i]
 
 module type S_rec = [%import: (module Stuff.S_rec)]
 
@@ -27,7 +27,7 @@ let test_constr _ctxt =
   ignore (Succ Zero : h);
   ignore (I 1 : i)
 
-type a' = [%import: Stuff.a] [@@deriving show]
+[%%import: type a' = Stuff.a [@@deriving show]]
 
 let test_deriving _ctxt =
   assert_equal ~printer:(fun x -> x) "(Stuff.A2 \"a\")" (show_a' (A2 "a"))
@@ -38,21 +38,21 @@ module Test_optional : S_optional = struct
   let f ?(opt = 0) () = ignore opt
 end
 
-type longident = [%import: Longident.t] [@@deriving show]
+[%%import: type longident = Longident.t [@@deriving show]]
 
+[%%import:
 type package_type =
-  [%import:
-    (Parsetree.package_type
-    [@with
-      core_type := (Parsetree.core_type [@printer Pprintast.core_type]);
-      Asttypes.loc :=
-        (Asttypes.loc [@polyprinter fun pp fmt x -> pp fmt x.Asttypes.txt]);
-      Longident.t := (Longident.t [@printer pp_longident])] )]
-[@@deriving show]
+  (Parsetree.package_type
+  [@with
+    core_type := (Parsetree.core_type [@printer Pprintast.core_type]);
+    Asttypes.loc :=
+      (Asttypes.loc [@polyprinter fun pp fmt x -> pp fmt x.Asttypes.txt]);
+    Longident.t := (Longident.t [@printer pp_longident])] )
+[@@deriving show]]
 
 module type Hashable = [%import: (module Hashtbl.HashedType)]
 
-type self_t = [%import: Test_self_import.t]
+[%%import: type self_t = Test_self_import.t]
 
 let test_self_import _ctxt =
   let v : self_t = `OptionA in

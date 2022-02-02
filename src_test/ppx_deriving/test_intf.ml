@@ -1,1 +1,1 @@
-type a = [%import: Stuff.a]
+[%%import: type a = Stuff.a]
