@@ -1,3 +1,8 @@
+unreleased
+-----
+
+  * Update ppxlib to 0.26.0 (#69, @pitag-ha)
+
 1.9.1
 -----
 

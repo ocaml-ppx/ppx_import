@@ -288,6 +288,7 @@ let ptype_decl_of_ttype_decl ~manifest ~subst ptype_name
                  in
                  { pcd_name =
                      {txt = Ocaml_common.Ident.name cd.cd_id; loc = cd.cd_loc}
+                 ; pcd_vars = []
                  ; pcd_args = map_args cd.cd_args
                  ; pcd_res
                  ; pcd_loc = cd.cd_loc
