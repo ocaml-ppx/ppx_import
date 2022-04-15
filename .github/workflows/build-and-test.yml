@@ -25,7 +25,7 @@ jobs:
           - 4.11.x
           - 4.12.x
           - 4.13.x
-          - ocaml-base-compiler.4.14.0~alpha1
+          - 4.14.x
 
     runs-on: ${{ matrix.os }}
 
