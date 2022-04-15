@@ -2,6 +2,7 @@
 -----
 
   * Support for OCaml 4.14 (#67 kit-ty-kate)
+  * ppx_import is not compatible with ppxlib >= 0.26 (#71 ejgallego)
 
 1.9.0
 -----
