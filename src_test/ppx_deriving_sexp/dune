@@ -1,4 +1,6 @@
 (test
  (name test_ppx_deriving_sexp)
+ (enabled_if
+  (>= %{ocaml_version} "4.10.0"))
  (preprocess
   (staged_pps ppx_import ppx_sexp_conv)))
