@@ -352,6 +352,11 @@ let subst_of_manifest ({ptyp_attributes; ptyp_loc; _} : Ppxlib.core_type) =
 
 let uncapitalize = String.uncapitalize_ascii
 
+let rec has_lapply = function
+  | Ppxlib.Lident _ -> false
+  | Ldot (lid, _) -> has_lapply lid
+  | Lapply (_, _) -> true
+
 let is_self_reference ~input_name lid =
   let fn =
     input_name |> Filename.basename |> Filename.chop_extension |> uncapitalize
@@ -371,7 +376,15 @@ let type_declaration ~tool_name ~input_name (type_decl : Ppxlib.type_declaration
     ; ptype_manifest =
         Some ({ptyp_desc = Ptyp_constr ({txt = lid; loc}, _); _} as manifest)
     ; _ } ->
-    if tool_name = "ocamldep" then
+    if has_lapply lid then
+      let ext =
+        Ppxlib.Location.error_extensionf ~loc
+          "[%%import] cannot import a functor application %s"
+          (string_of_lid lid)
+      in
+      let core_type = Ast_builder.Default.ptyp_extension ~loc ext in
+      {type_decl with ptype_manifest = Some core_type}
+    else if tool_name = "ocamldep" then
       (* Just put it as manifest *)
       if is_self_reference ~input_name lid then
         {type_decl with ptype_manifest = None}
@@ -382,9 +395,9 @@ let type_declaration ~tool_name ~input_name (type_decl : Ppxlib.type_declaration
             let env = Lazy.force lazy_env in
             match lid with
             | Lapply _ ->
-              Location.raise_errorf ~loc
-                "[%%import] cannot import a functor application %s"
-                (string_of_lid lid)
+              (* the function [has_lapply] called upper should ensure
+                 that this case never happens *)
+              assert false
             | Lident _ as head_id ->
               (* In this case, we know for sure that the user intends this lident
                  as a type name, so we use Typetexp.find_type and let the failure
@@ -465,7 +478,13 @@ let rec psig_of_tsig ~subst (tsig : Compat.signature_item_407 list) :
 let module_type ~tool_name ~input_name (package_type : Ppxlib.package_type) =
   let open Ppxlib in
   let ({txt = lid; loc} as alias), subst = package_type in
-  if tool_name = "ocamldep" then
+  if has_lapply lid then
+    let ext =
+      Ppxlib.Location.error_extensionf ~loc
+        "[%%import] cannot import a functor application %s" (string_of_lid lid)
+    in
+    Ast_builder.Default.pmty_extension ~loc ext
+  else if tool_name = "ocamldep" then
     if is_self_reference ~input_name lid then
       (* Create a dummy module type to break the circular dependency *)
       Ast_helper.Mty.mk ~attrs:[] (Pmty_signature [])
@@ -477,9 +496,9 @@ let module_type ~tool_name ~input_name (package_type : Ppxlib.package_type) =
         let tmodtype_decl =
           match lid with
           | Longident.Lapply _ ->
-            Location.raise_errorf ~loc
-              "[%%import] cannot import a functor application %s"
-              (string_of_lid lid)
+            (* the function [has_lapply] called upper should ensure
+                that this case never happens *)
+            assert false
           | Longident.Lident _ as head_id ->
             (* In this case, we know for sure that the user intends this lident
                as a module type name, so we use Typetexp.find_type and
@@ -497,9 +516,16 @@ let module_type ~tool_name ~input_name (package_type : Ppxlib.package_type) =
           in
           Ast_helper.Mty.mk ~attrs:[] (Pmty_signature psig)
         | {mtd_type = None; _} ->
-          Location.raise_errorf ~loc "Imported module is abstract"
+          let ext =
+            Ppxlib.Location.error_extensionf ~loc "Imported module is abstract"
+          in
+          Ast_builder.Default.pmty_extension ~loc ext
         | _ ->
-          Location.raise_errorf ~loc "Imported module is indirectly defined" )
+          let ext =
+            Ppxlib.Location.error_extensionf ~loc
+              "Imported module is indirectly defined"
+          in
+          Ast_builder.Default.pmty_extension ~loc ext )
 
 let type_declaration_expand ~ctxt rec_flag type_decls =
   let loc = Ppxlib.Expansion_context.Extension.extension_point_loc ctxt in
