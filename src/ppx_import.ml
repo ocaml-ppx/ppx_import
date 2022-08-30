@@ -501,19 +501,19 @@ let module_type ~tool_name ~input_name (package_type : Ppxlib.package_type) =
         | _ ->
           Location.raise_errorf ~loc "Imported module is indirectly defined" )
 
-let type_declaration_expand ~ctxt rec_flag type_decl =
+let type_declaration_expand ~ctxt rec_flag type_decls =
   let loc = Ppxlib.Expansion_context.Extension.extension_point_loc ctxt in
   let tool_name = Ppxlib.Expansion_context.Extension.tool_name ctxt in
   let input_name = Ppxlib.Expansion_context.Extension.input_name ctxt in
-  let type_decl = type_declaration ~tool_name ~input_name type_decl in
-  Ppxlib.{pstr_desc = Pstr_type (rec_flag, [type_decl]); pstr_loc = loc}
+  let type_decls = type_decls |> List.map (type_declaration ~tool_name ~input_name) in
+  Ppxlib.{pstr_desc = Pstr_type (rec_flag, type_decls); pstr_loc = loc}
 
-let type_declaration_expand_intf ~ctxt rec_flag type_decl =
+let type_declaration_expand_intf ~ctxt rec_flag type_decls =
   let loc = Ppxlib.Expansion_context.Extension.extension_point_loc ctxt in
   let tool_name = Ppxlib.Expansion_context.Extension.tool_name ctxt in
   let input_name = Ppxlib.Expansion_context.Extension.input_name ctxt in
-  let type_decl = type_declaration ~tool_name ~input_name type_decl in
-  Ppxlib.{psig_desc = Psig_type (rec_flag, [type_decl]); psig_loc = loc}
+  let type_decls = type_decls |> List.map (type_declaration ~tool_name ~input_name) in
+  Ppxlib.{psig_desc = Psig_type (rec_flag, type_decls); psig_loc = loc}
 
 let module_declaration_expand ~ctxt package_type =
   let tool_name = Ppxlib.Expansion_context.Extension.tool_name ctxt in
@@ -523,15 +523,15 @@ let module_declaration_expand ~ctxt package_type =
 let type_declaration_extension =
   Ppxlib.Extension.V3.declare "import" Ppxlib.Extension.Context.structure_item
     Ppxlib.Ast_pattern.(
-      psig (psig_type __ (__ ^:: nil) ^:: nil)
-      ||| pstr (pstr_type __ (__ ^:: nil) ^:: nil))
+      psig (psig_type __ __ ^:: nil)
+      ||| pstr (pstr_type __ __ ^:: nil))
     type_declaration_expand
 
 let type_declaration_extension_intf =
   Ppxlib.Extension.V3.declare "import" Ppxlib.Extension.Context.signature_item
     Ppxlib.Ast_pattern.(
-      psig (psig_type __ (__ ^:: nil) ^:: nil)
-      ||| pstr (pstr_type __ (__ ^:: nil) ^:: nil))
+      psig (psig_type __ __ ^:: nil)
+      ||| pstr (pstr_type __ __ ^:: nil))
     type_declaration_expand_intf
 
 let module_declaration_extension =
