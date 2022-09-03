@@ -1,4 +1,4 @@
-[%%import]
+Import
 ==========
 
 _import_ is a syntax extension that allows to pull in types or signatures from other compiled interface files.
@@ -35,7 +35,7 @@ Syntax
 For example:
 
 ``` ocaml
-# type loc = [%import: Location.t];;
+# type%import loc = Location.t;;
 type loc = Location.t = { loc_start : Lexing.position; loc_end : Lexing.position; loc_ghost : bool; }
 # module type Hashable = [%import: (module Hashtbl.HashedType)];;
 module type Hashable = sig type t val equal : t -> t -> bool val hash : t -> int end
@@ -50,7 +50,7 @@ It's possible to combine _import_ and [_deriving_][deriving] to derive functions
 [deriving]: https://github.com/whitequark/ppx_deriving
 
 ``` ocaml
-type longident = [%import: Longident.t] [@@deriving show]
+type%import longident = Longident.t [@@deriving show]
 let () =
   print_endline (show_longident (Longident.parse "Foo.Bar.baz"))
 (* Longident.Ldot (Longident.Ldot (Longident.Lident ("Foo"), "Bar"), "baz") *)
@@ -65,11 +65,11 @@ It is possible to syntactically replace a type with another while importing a de
 For example, this snippet imports a single type from Parsetree and specifies a custom pretty-printer for _deriving show_.
 
 ``` ocaml
-type package_type =
-[%import: Parsetree.package_type
+type%import package_type =
+Parsetree.package_type
           [@with core_type    := Parsetree.core_type [@printer Pprintast.core_type];
                  Asttypes.loc := Asttypes.loc [@polyprinter fun pp fmt x -> pp fmt x.Asttypes.txt];
-                 Longident.t  := Longident.t [@printer pp_longident]]]
+                 Longident.t  := Longident.t [@printer pp_longident]]
 [@@deriving show]
 ```
 
