@@ -1,4 +1,4 @@
-type t = [%import: Test_self_import.t]
+[%%import: type t = Test_self_import.t]
 
 module type S = [%import: (module Test_self_import.S)]
 

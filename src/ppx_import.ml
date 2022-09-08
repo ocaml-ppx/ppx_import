@@ -369,52 +369,48 @@ let type_declaration ~tool_name ~input_name (type_decl : Ppxlib.type_declaration
   | { ptype_attributes
     ; ptype_name
     ; ptype_manifest =
-        Some {ptyp_desc = Ptyp_extension ({txt = "import"; loc}, payload); _}
-    ; _ } -> (
-    match payload with
-    | PTyp ({ptyp_desc = Ptyp_constr ({txt = lid; loc}, _); _} as manifest) ->
-      if tool_name = "ocamldep" then
-        (* Just put it as manifest *)
-        if is_self_reference ~input_name lid then
-          {type_decl with ptype_manifest = None}
-        else {type_decl with ptype_manifest = Some manifest}
-      else
-        Ast_helper.with_default_loc loc (fun () ->
-            let ttype_decl =
-              let env = Lazy.force lazy_env in
-              match lid with
-              | Lapply _ ->
-                Location.raise_errorf ~loc
-                  "[%%import] cannot import a functor application %s"
-                  (string_of_lid lid)
-              | Lident _ as head_id ->
-                (* In this case, we know for sure that the user intends this lident
-                   as a type name, so we use Typetexp.find_type and let the failure
-                   cases propagate to the user. *)
-                Compat.find_type env ~loc head_id |> snd
-              | Ldot (parent_id, elem) ->
-                let sig_items = locate_sig ~loc env parent_id in
-                get_type_decl ~loc sig_items parent_id elem
-            in
-            let m, s =
-              if is_self_reference ~input_name lid then (None, [])
-              else
-                let subst = subst_of_manifest manifest in
-                let subst =
-                  subst
-                  @ [ ( `Lid (Lident (Longident.last_exn lid))
-                      , Ast_helper.Typ.constr
-                          {txt = Lident ptype_name.txt; loc = ptype_name.loc}
-                          [] ) ]
-                in
-                (Some manifest, subst)
-            in
-            let ptype_decl =
-              ptype_decl_of_ttype_decl ~manifest:m ~subst:s ptype_name
-                ttype_decl
-            in
-            {ptype_decl with ptype_attributes} )
-    | _ -> Location.raise_errorf ~loc "Invalid [%%import] syntax" )
+        Some ({ptyp_desc = Ptyp_constr ({txt = lid; loc}, _); _} as manifest)
+    ; _ } ->
+    if tool_name = "ocamldep" then
+      (* Just put it as manifest *)
+      if is_self_reference ~input_name lid then
+        {type_decl with ptype_manifest = None}
+      else {type_decl with ptype_manifest = Some manifest}
+    else
+      Ast_helper.with_default_loc loc (fun () ->
+          let ttype_decl =
+            let env = Lazy.force lazy_env in
+            match lid with
+            | Lapply _ ->
+              Location.raise_errorf ~loc
+                "[%%import] cannot import a functor application %s"
+                (string_of_lid lid)
+            | Lident _ as head_id ->
+              (* In this case, we know for sure that the user intends this lident
+                 as a type name, so we use Typetexp.find_type and let the failure
+                 cases propagate to the user. *)
+              Compat.find_type env ~loc head_id |> snd
+            | Ldot (parent_id, elem) ->
+              let sig_items = locate_sig ~loc env parent_id in
+              get_type_decl ~loc sig_items parent_id elem
+          in
+          let m, s =
+            if is_self_reference ~input_name lid then (None, [])
+            else
+              let subst = subst_of_manifest manifest in
+              let subst =
+                subst
+                @ [ ( `Lid (Lident (Longident.last_exn lid))
+                    , Ast_helper.Typ.constr
+                        {txt = Lident ptype_name.txt; loc = ptype_name.loc}
+                        [] ) ]
+              in
+              (Some manifest, subst)
+          in
+          let ptype_decl =
+            ptype_decl_of_ttype_decl ~manifest:m ~subst:s ptype_name ttype_decl
+          in
+          {ptype_decl with ptype_attributes} )
   | _ -> type_decl
 
 let rec cut_tsig_block_of_rec_types accu (tsig : Compat.signature_item_407 list)
@@ -505,10 +501,19 @@ let module_type ~tool_name ~input_name (package_type : Ppxlib.package_type) =
         | _ ->
           Location.raise_errorf ~loc "Imported module is indirectly defined" )
 
-let type_declaration_expand ~ctxt type_decl =
+let type_declaration_expand ~ctxt rec_flag type_decls =
+  let loc = Ppxlib.Expansion_context.Extension.extension_point_loc ctxt in
   let tool_name = Ppxlib.Expansion_context.Extension.tool_name ctxt in
   let input_name = Ppxlib.Expansion_context.Extension.input_name ctxt in
-  type_declaration ~tool_name ~input_name type_decl
+  let type_decls = type_decls |> List.map (type_declaration ~tool_name ~input_name) in
+  Ppxlib.{pstr_desc = Pstr_type (rec_flag, type_decls); pstr_loc = loc}
+
+let type_declaration_expand_intf ~ctxt rec_flag type_decls =
+  let loc = Ppxlib.Expansion_context.Extension.extension_point_loc ctxt in
+  let tool_name = Ppxlib.Expansion_context.Extension.tool_name ctxt in
+  let input_name = Ppxlib.Expansion_context.Extension.input_name ctxt in
+  let type_decls = type_decls |> List.map (type_declaration ~tool_name ~input_name) in
+  Ppxlib.{psig_desc = Psig_type (rec_flag, type_decls); psig_loc = loc}
 
 let module_declaration_expand ~ctxt package_type =
   let tool_name = Ppxlib.Expansion_context.Extension.tool_name ctxt in
@@ -516,7 +521,18 @@ let module_declaration_expand ~ctxt package_type =
   module_type ~tool_name ~input_name package_type
 
 let type_declaration_extension =
-  Ppxlib.Extension.__declare_ppx_import "import" type_declaration_expand
+  Ppxlib.Extension.V3.declare "import" Ppxlib.Extension.Context.structure_item
+    Ppxlib.Ast_pattern.(
+      psig (psig_type __ __ ^:: nil)
+      ||| pstr (pstr_type __ __ ^:: nil))
+    type_declaration_expand
+
+let type_declaration_extension_intf =
+  Ppxlib.Extension.V3.declare "import" Ppxlib.Extension.Context.signature_item
+    Ppxlib.Ast_pattern.(
+      psig (psig_type __ __ ^:: nil)
+      ||| pstr (pstr_type __ __ ^:: nil))
+    type_declaration_expand_intf
 
 let module_declaration_extension =
   Ppxlib.Extension.V3.declare "import" Ppxlib.Extension.Context.module_type
@@ -526,10 +542,16 @@ let module_declaration_extension =
 let type_declaration_rule =
   Ppxlib.Context_free.Rule.extension type_declaration_extension
 
+let type_declaration_rule_intf =
+  Ppxlib.Context_free.Rule.extension type_declaration_extension_intf
+
 let module_declaration_rule =
   Ppxlib.Context_free.Rule.extension module_declaration_extension
 
 let () =
   Ppxlib.Driver.register_transformation
-    ~rules:[type_declaration_rule; module_declaration_rule]
+    ~rules:
+      [ type_declaration_rule
+      ; module_declaration_rule
+      ; type_declaration_rule_intf ]
     "ppx_import"

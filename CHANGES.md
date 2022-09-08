@@ -1,3 +1,19 @@
+Unreleased
+-----
+  * **BREAKING:** Rewrite `ppx_import` as a context free rule. It changes the syntax of the type declaration from:
+
+  ```ocaml
+  type loc = [%import: Location.t];;
+  ```
+
+  to:
+
+  ```ocaml
+  [%%import : type loc = Location.t]
+  (* or *)
+  type%import loc = Location.t
+  ```
+
 1.10.0
 ------
 
