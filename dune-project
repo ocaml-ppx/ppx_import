@@ -1,3 +1,2 @@
-(lang dune 1.11)
-(using fmt 1.2)
+(lang dune 3.0)
 (name ppx_import)
