@@ -2,7 +2,10 @@ open OUnit2
 
 [%%import type a = Stuff.a]
 type%import b = Stuff.b
-type%import c = Stuff.c and d = Stuff.d
+
+type%import c = Stuff.c
+and d = Stuff.d
+
 [%%import: type e = Stuff.e]
 [%%import: type f = Stuff.S.f]
 [%%import: type 'a g = 'a Stuff.g]
