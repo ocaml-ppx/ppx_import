@@ -3,3 +3,8 @@
  (preprocess
   (staged_pps ppx_import ppx_deriving.show))
  (libraries compiler-libs.common oUnit))
+
+(env
+ (dev
+  (flags
+   (:standard -w -32-34))))
