@@ -8,7 +8,3 @@
  (dev
   (flags
    (:standard -w -32-34))))
-
-(cram
- (deps
-  (package ppx_import)))
