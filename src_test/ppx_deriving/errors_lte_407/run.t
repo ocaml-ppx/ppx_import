@@ -15,7 +15,7 @@ Functor error
 
   $ dune build 2>&1 | sed 's/\(Command line: \).*/\1Error/'
   File ".test.objs/byte/_unknown_", line 1, characters 0-0:
-  Fatal error: exception (Invalid_argument Ppxlib.Longident.flatten)
+  Fatal error: exception Invalid_argument("Ppxlib.Longident.flatten")
   File "test.ml", line 1:
   Error: Error while running external preprocessor
   Command line: Error
