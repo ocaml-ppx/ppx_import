@@ -26,7 +26,7 @@ Parameters error
   > EOF
 
   $ dune build
-  File "_none_", line 1:
+  File "test.ml", line 1, characters 21-27:
   Error: [%import]: cannot find the type t in List
   [1]
 
@@ -86,6 +86,6 @@ Cannot find module error
   > EOF
 
   $ dune build
-  File "_none_", line 1:
+  File "test.ml", line 1, characters 34-43:
   Error: [%import]: cannot find the module type M in Stuff.S
   [1]
