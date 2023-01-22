@@ -96,6 +96,8 @@ Cannot find module error
   > EOF
 
   $ dune build
-  File "_none_", line 1:
+  File "test.ml", line 1, characters 34-43:
+  1 | module type A = [%import: (module Stuff.S.M)]
+                                        ^^^^^^^^^
   Error: [%import]: cannot find the module type M in Stuff.S
   [1]
