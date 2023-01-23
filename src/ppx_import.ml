@@ -104,9 +104,16 @@ let open_module_type ~loc env lid module_type =
 
 let locate_sig ~loc env lid =
   let head, path =
-    match Ppxlib.Longident.flatten_exn lid with
-    | head :: path -> (Longident.Lident head, path)
-    | _ -> assert false
+    try
+      match Ppxlib.Longident.flatten_exn lid with
+      | head :: path -> (Longident.Lident head, path)
+      | _ -> assert false
+    with Invalid_argument _ ->
+      let error =
+        Printf.sprintf "[%%import] cannot import a functor application %s"
+          (string_of_lid lid)
+      in
+      raise_error ~loc error
   in
   let head_module_type =
     match
