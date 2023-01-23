@@ -19,6 +19,7 @@ Functor error
                            ^^^^^^^^^^^^^^^^^^
   Error: [%import] cannot import a functor application Map.Make(String)
   [1]
+
 Parameters error
   $ cat >test.ml <<EOF
   > [%%import: type t =  List.t]
