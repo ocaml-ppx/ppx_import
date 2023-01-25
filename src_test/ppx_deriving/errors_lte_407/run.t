@@ -15,8 +15,6 @@ Functor error
 
   $ dune build
   File "test.ml", line 1, characters 21-39:
-  1 | [%%import: type t =  Map.Make(String).t]
-                           ^^^^^^^^^^^^^^^^^^
   Error: [%import] cannot import a functor application Map.Make(String)
   [1]
 
