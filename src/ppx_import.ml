@@ -1,5 +1,11 @@
 module Tt = Ppx_types_migrate
 
+type error = {loc : Location.t; error : string}
+
+exception Error of error
+
+let raise_error ~loc error = raise (Error {loc; error})
+
 let lazy_env =
   lazy
     ( (* It is important that the typing environment is not evaluated
@@ -66,9 +72,12 @@ let try_find_module_type ~loc env lid =
     Some
       ( match modtype_decl.mtd_type with
       | None ->
-        Location.raise_errorf ~loc
-          "[%%import]: cannot access the signature of the abstract module %s"
-          (string_of_lid lid)
+        let error =
+          Printf.sprintf
+            "[%%import]: cannot access the signature of the abstract module %s"
+            (string_of_lid lid)
+        in
+        raise_error ~loc error
       | Some module_type -> module_type )
   with Not_found -> None
 
@@ -87,14 +96,24 @@ let open_module_type ~loc env lid module_type =
   match try_open_module_type env module_type with
   | Some sig_items -> sig_items
   | None ->
-    Location.raise_errorf ~loc "[%%import]: cannot find the components of %s"
-      (string_of_lid lid)
+    let error =
+      Printf.sprintf "[%%import]: cannot find the components of %s"
+        (string_of_lid lid)
+    in
+    raise_error ~loc error
 
 let locate_sig ~loc env lid =
   let head, path =
-    match Ppxlib.Longident.flatten_exn lid with
-    | head :: path -> (Longident.Lident head, path)
-    | _ -> assert false
+    try
+      match Ppxlib.Longident.flatten_exn lid with
+      | head :: path -> (Longident.Lident head, path)
+      | _ -> assert false
+    with Invalid_argument _ ->
+      let error =
+        Printf.sprintf "[%%import] cannot import a functor application %s"
+          (string_of_lid lid)
+      in
+      raise_error ~loc error
   in
   let head_module_type =
     match
@@ -103,8 +122,10 @@ let locate_sig ~loc env lid =
     | Some mty, _ -> mty
     | None, (lazy (Some mty)) -> mty
     | None, (lazy None) ->
-      Location.raise_errorf ~loc "[%%import]: cannot locate module %s"
-        (string_of_lid lid)
+      let error =
+        Printf.sprintf "[%%import]: cannot locate module %s" (string_of_lid lid)
+      in
+      raise_error ~loc error
   in
   let get_sub_module_type (lid, module_type) path_item =
     let sig_items = open_module_type ~loc env lid module_type in
@@ -117,9 +138,11 @@ let locate_sig ~loc env lid =
         md_type
       | _ :: sig_items -> loop sig_items
       | [] ->
-        Location.raise_errorf ~loc
-          "[%%import]: cannot find the signature of %s in %s" path_item
-          (string_of_lid lid)
+        let error =
+          Printf.sprintf "[%%import]: cannot find the signature of %s in %s"
+            path_item (string_of_lid lid)
+        in
+        raise_error ~loc error
     in
     let sub_module_type =
       loop (List.map Compat.migrate_signature_item sig_items)
@@ -148,8 +171,11 @@ let get_type_decl ~loc sig_items parent_lid elem =
   in
   match try_get_tsig_item select_type ~loc sig_items elem with
   | None ->
-    Location.raise_errorf "[%%import]: cannot find the type %s in %s" elem
-      (string_of_lid parent_lid)
+    let error =
+      Printf.sprintf "[%%import]: cannot find the type %s in %s" elem
+        (string_of_lid parent_lid)
+    in
+    raise_error ~loc error
   | Some decl -> decl
 
 let get_modtype_decl ~loc sig_items parent_lid elem =
@@ -160,8 +186,11 @@ let get_modtype_decl ~loc sig_items parent_lid elem =
   in
   match try_get_tsig_item select_modtype ~loc sig_items elem with
   | None ->
-    Location.raise_errorf "[%%import]: cannot find the module type %s in %s"
-      elem (string_of_lid parent_lid)
+    let error =
+      Printf.sprintf "[%%import]: cannot find the module type %s in %s" elem
+        (string_of_lid parent_lid)
+    in
+    raise_error ~loc error
   | Some decl -> decl
 
 let longident_of_path = Untypeast.lident_of_path
@@ -239,10 +268,12 @@ let ptype_decl_of_ttype_decl ~manifest ~subst ptype_name
           ttype_decl.type_params ptype_args
         |> List.concat
       with Invalid_argument _ ->
-        Location.raise_errorf ~loc:ptyp_loc
-          "Imported type has %d parameter(s), but %d are passed"
-          (List.length ttype_decl.type_params)
-          (List.length ptype_args) )
+        let error =
+          Printf.sprintf "Imported type has %d parameter(s), but %d are passed"
+            (List.length ttype_decl.type_params)
+            (List.length ptype_args)
+        in
+        raise_error ~loc:ptyp_loc error )
     | None -> []
     | _ -> assert false
   in
@@ -337,8 +368,7 @@ let subst_of_manifest ({ptyp_attributes; ptyp_loc; _} : Ppxlib.core_type) =
         ; ptyp_attributes = pexp_attributes
         ; ptyp_desc = Ptyp_constr (dst, []) } )
       :: subst_of_expr rest
-    | {pexp_loc; _} ->
-      Location.raise_errorf ~loc:pexp_loc "Invalid [@with] syntax"
+    | {pexp_loc; _} -> raise_error ~loc:pexp_loc "Invalid [@with] syntax"
   in
   let find_attr s attrs =
     try
@@ -348,18 +378,25 @@ let subst_of_manifest ({ptyp_attributes; ptyp_loc; _} : Ppxlib.core_type) =
   match find_attr "with" ptyp_attributes with
   | None -> []
   | Some (PStr [{pstr_desc = Pstr_eval (expr, []); _}]) -> subst_of_expr expr
-  | Some _ -> Location.raise_errorf ~loc:ptyp_loc "Invalid [@with] syntax"
+  | Some _ -> raise_error ~loc:ptyp_loc "Invalid [@with] syntax"
 
 let uncapitalize = String.uncapitalize_ascii
 
-let is_self_reference ~input_name lid =
+let is_self_reference ~input_name ~loc lid =
   let fn =
     input_name |> Filename.basename |> Filename.chop_extension |> uncapitalize
   in
   match lid with
-  | Ppxlib.Ldot _ ->
-    let mn = Ppxlib.Longident.flatten_exn lid |> List.hd |> uncapitalize in
-    fn = mn
+  | Ppxlib.Ldot _ -> (
+    try
+      let mn = Ppxlib.Longident.flatten_exn lid |> List.hd |> uncapitalize in
+      fn = mn
+    with Invalid_argument _ ->
+      let error =
+        Printf.sprintf "[%%import] cannot import a functor application %s"
+          (string_of_lid lid)
+      in
+      raise_error ~loc error )
   | _ -> false
 
 let type_declaration ~tool_name ~input_name (type_decl : Ppxlib.type_declaration)
@@ -370,47 +407,56 @@ let type_declaration ~tool_name ~input_name (type_decl : Ppxlib.type_declaration
     ; ptype_name
     ; ptype_manifest =
         Some ({ptyp_desc = Ptyp_constr ({txt = lid; loc}, _); _} as manifest)
-    ; _ } ->
-    if tool_name = "ocamldep" then
-      (* Just put it as manifest *)
-      if is_self_reference ~input_name lid then
-        {type_decl with ptype_manifest = None}
-      else {type_decl with ptype_manifest = Some manifest}
-    else
-      Ast_helper.with_default_loc loc (fun () ->
-          let ttype_decl =
-            let env = Lazy.force lazy_env in
-            match lid with
-            | Lapply _ ->
-              Location.raise_errorf ~loc
-                "[%%import] cannot import a functor application %s"
-                (string_of_lid lid)
-            | Lident _ as head_id ->
-              (* In this case, we know for sure that the user intends this lident
-                 as a type name, so we use Typetexp.find_type and let the failure
-                 cases propagate to the user. *)
-              Compat.find_type env ~loc head_id |> snd
-            | Ldot (parent_id, elem) ->
-              let sig_items = locate_sig ~loc env parent_id in
-              get_type_decl ~loc sig_items parent_id elem
-          in
-          let m, s =
-            if is_self_reference ~input_name lid then (None, [])
-            else
-              let subst = subst_of_manifest manifest in
-              let subst =
-                subst
-                @ [ ( `Lid (Lident (Longident.last_exn lid))
-                    , Ast_helper.Typ.constr
-                        {txt = Lident ptype_name.txt; loc = ptype_name.loc}
-                        [] ) ]
-              in
-              (Some manifest, subst)
-          in
-          let ptype_decl =
-            ptype_decl_of_ttype_decl ~manifest:m ~subst:s ptype_name ttype_decl
-          in
-          {ptype_decl with ptype_attributes} )
+    ; _ } -> (
+    try
+      if tool_name = "ocamldep" then
+        (* Just put it as manifest *)
+        if is_self_reference ~input_name ~loc lid then
+          {type_decl with ptype_manifest = None}
+        else {type_decl with ptype_manifest = Some manifest}
+      else
+        Ast_helper.with_default_loc loc (fun () ->
+            let ttype_decl =
+              let env = Lazy.force lazy_env in
+              match lid with
+              | Lapply _ ->
+                let error =
+                  Printf.sprintf
+                    "[%%import] cannot import a functor application %s"
+                    (string_of_lid lid)
+                in
+                raise_error ~loc error
+              | Lident _ as head_id ->
+                (* In this case, we know for sure that the user intends this lident
+                   as a type name, so we use Typetexp.find_type and let the failure
+                   cases propagate to the user. *)
+                Compat.find_type env ~loc head_id |> snd
+              | Ldot (parent_id, elem) ->
+                let sig_items = locate_sig ~loc env parent_id in
+                get_type_decl ~loc sig_items parent_id elem
+            in
+            let m, s =
+              if is_self_reference ~input_name ~loc lid then (None, [])
+              else
+                let subst = subst_of_manifest manifest in
+                let subst =
+                  subst
+                  @ [ ( `Lid (Lident (Longident.last_exn lid))
+                      , Ast_helper.Typ.constr
+                          {txt = Lident ptype_name.txt; loc = ptype_name.loc}
+                          [] ) ]
+                in
+                (Some manifest, subst)
+            in
+            let ptype_decl =
+              ptype_decl_of_ttype_decl ~manifest:m ~subst:s ptype_name
+                ttype_decl
+            in
+            {ptype_decl with ptype_attributes} )
+    with Error {loc; error} ->
+      let ext = Ppxlib.Location.error_extensionf ~loc "%s" error in
+      let core_type = Ast_builder.Default.ptyp_extension ~loc ext in
+      {type_decl with ptype_manifest = Some core_type} )
   | _ -> type_decl
 
 let rec cut_tsig_block_of_rec_types accu (tsig : Compat.signature_item_407 list)
@@ -464,42 +510,60 @@ let rec psig_of_tsig ~subst (tsig : Compat.signature_item_407 list) :
 
 let module_type ~tool_name ~input_name (package_type : Ppxlib.package_type) =
   let open Ppxlib in
-  let ({txt = lid; loc} as alias), subst = package_type in
-  if tool_name = "ocamldep" then
-    if is_self_reference ~input_name lid then
-      (* Create a dummy module type to break the circular dependency *)
-      Ast_helper.Mty.mk ~attrs:[] (Pmty_signature [])
-    else (* Just put it as alias *)
-      Ast_helper.Mty.mk ~attrs:[] (Pmty_alias alias)
-  else
-    Ppxlib.Ast_helper.with_default_loc loc (fun () ->
-        let env = Lazy.force lazy_env in
-        let tmodtype_decl =
-          match lid with
-          | Longident.Lapply _ ->
-            Location.raise_errorf ~loc
-              "[%%import] cannot import a functor application %s"
-              (string_of_lid lid)
-          | Longident.Lident _ as head_id ->
-            (* In this case, we know for sure that the user intends this lident
-               as a module type name, so we use Typetexp.find_type and
-               let the failure cases propagate to the user. *)
-            Compat.find_modtype env ~loc head_id |> snd
-          | Longident.Ldot (parent_id, elem) ->
-            let sig_items = locate_sig ~loc env parent_id in
-            get_modtype_decl ~loc sig_items parent_id elem
-        in
-        match tmodtype_decl with
-        | {mtd_type = Some (Mty_signature tsig); _} ->
-          let subst = List.map (fun ({txt; _}, typ) -> (`Lid txt, typ)) subst in
-          let psig =
-            psig_of_tsig ~subst (List.map Compat.migrate_signature_item tsig)
+  try
+    let ({txt = lid; loc} as alias), subst = package_type in
+    if tool_name = "ocamldep" then
+      if is_self_reference ~input_name ~loc lid then
+        (* Create a dummy module type to break the circular dependency *)
+        Ast_helper.Mty.mk ~attrs:[] (Pmty_signature [])
+      else
+        (* Just put it as alias *)
+        Ast_helper.Mty.mk ~attrs:[] (Pmty_alias alias)
+    else
+      Ppxlib.Ast_helper.with_default_loc loc (fun () ->
+          let env = Lazy.force lazy_env in
+          let tmodtype_decl =
+            match lid with
+            | Longident.Lapply _ ->
+              let error =
+                Printf.sprintf
+                  "[%%import] cannot import a functor application %s"
+                  (string_of_lid lid)
+              in
+              raise_error ~loc error
+            | Longident.Lident _ as head_id ->
+              (* In this case, we know for sure that the user intends this lident
+                 as a module type name, so we use Typetexp.find_type and
+                 let the failure cases propagate to the user. *)
+              Compat.find_modtype env ~loc head_id |> snd
+            | Longident.Ldot (parent_id, elem) ->
+              let sig_items = locate_sig ~loc env parent_id in
+              get_modtype_decl ~loc sig_items parent_id elem
           in
-          Ast_helper.Mty.mk ~attrs:[] (Pmty_signature psig)
-        | {mtd_type = None; _} ->
-          Location.raise_errorf ~loc "Imported module is abstract"
-        | _ ->
-          Location.raise_errorf ~loc "Imported module is indirectly defined" )
+          match tmodtype_decl with
+          | {mtd_type = Some (Mty_signature tsig); _} ->
+            let subst =
+              List.map (fun ({txt; _}, typ) -> (`Lid txt, typ)) subst
+            in
+            let psig =
+              psig_of_tsig ~subst (List.map Compat.migrate_signature_item tsig)
+            in
+            Ast_helper.Mty.mk ~attrs:[] (Pmty_signature psig)
+          | {mtd_type = None; _} ->
+            let ext =
+              Ppxlib.Location.error_extensionf ~loc
+                "Imported module is abstract"
+            in
+            Ast_builder.Default.pmty_extension ~loc ext
+          | _ ->
+            let ext =
+              Ppxlib.Location.error_extensionf ~loc
+                "Imported module is indirectly defined"
+            in
+            Ast_builder.Default.pmty_extension ~loc ext )
+  with Error {loc; error} ->
+    let ext = Ppxlib.Location.error_extensionf ~loc "%s" error in
+    Ast_builder.Default.pmty_extension ~loc ext
 
 let type_declaration_expand ~ctxt rec_flag type_decls =
   let loc = Ppxlib.Expansion_context.Extension.extension_point_loc ctxt in

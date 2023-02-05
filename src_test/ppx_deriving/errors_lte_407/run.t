@@ -13,20 +13,18 @@ Functor error
   > [%%import: type t =  Map.Make(String).t]
   > EOF
 
-  $ dune build 2>&1 | sed 's/\(Command line: \).*/\1Error/'
-  File ".test.objs/byte/_unknown_", line 1, characters 0-0:
-  Fatal error: exception Invalid_argument("Ppxlib.Longident.flatten")
-  File "test.ml", line 1:
-  Error: Error while running external preprocessor
-  Command line: Error
-  
+  $ dune build
+  File "test.ml", line 1, characters 21-39:
+  Error: [%import] cannot import a functor application Map.Make(String)
+  [1]
+
 Parameters error
   $ cat >test.ml <<EOF
   > [%%import: type t =  List.t]
   > EOF
 
   $ dune build
-  File "_none_", line 1:
+  File "test.ml", line 1, characters 21-27:
   Error: [%import]: cannot find the type t in List
   [1]
 
@@ -86,6 +84,6 @@ Cannot find module error
   > EOF
 
   $ dune build
-  File "_none_", line 1:
+  File "test.ml", line 1, characters 34-43:
   Error: [%import]: cannot find the module type M in Stuff.S
   [1]
