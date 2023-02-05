@@ -54,6 +54,16 @@ type package_type =
 
 module type Hashable = [%import: (module Hashtbl.HashedType)]
 
+module type HashableWith = [%import:
+(module Hashtbl.HashedType with type t = string)]
+
+module HashableWith : HashableWith = struct
+  type t
+
+  let equal = String.equal
+  let hash = int_of_string
+end
+
 [%%import: type self_t = Test_self_import.t]
 
 let test_self_import _ctxt =
