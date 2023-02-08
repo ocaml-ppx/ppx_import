@@ -98,3 +98,183 @@ Multiple signature items
   File "test.ml", line 1, characters 0-40:
   Error: [] expected
   [1]
+
+Ptyp
+  $ cat >test.ml <<EOF
+  > [%%import: string]
+  > EOF
+
+  $ dune build
+  File "test.ml", line 1, characters 0-18:
+  1 | [%%import: string]
+      ^^^^^^^^^^^^^^^^^^
+  Error: PSig expected
+  [1]
+
+Inline module type declaration
+  $ cat >test.ml <<EOF
+  > module type Hashable = [%import: (module sig type t end)]
+  > EOF
+
+  $ dune build
+  File "test.ml", line 1, characters 41-55:
+  1 | module type Hashable = [%import: (module sig type t end)]
+                                               ^^^^^^^^^^^^^^
+  Error: invalid package type: only module type identifier and 'with type' constraints are supported
+  [1]
+
+Functor
+  $ cat >test.ml <<EOF
+  > module type Foo = [%import: (module functor (M : sig end) -> sig end)]
+  > EOF
+
+  $ dune build
+  File "test.ml", line 1, characters 44-68:
+  1 | module type Foo = [%import: (module functor (M : sig end) -> sig end)]
+                                                  ^^^^^^^^^^^^^^^^^^^^^^^^
+  Error: invalid package type: only module type identifier and 'with type' constraints are supported
+  [1]
+
+Module type of
+  $ cat >test.ml <<EOF
+  > module type Example = [%import: (module type of A)]
+  > EOF
+
+  $ dune build
+  File "test.ml", line 1, characters 40-44:
+  1 | module type Example = [%import: (module type of A)]
+                                              ^^^^
+  Error: Syntax error
+  [1]
+
+Pmty_extension
+  $ cat >test.ml <<EOF
+  > module type M = [%import: [%extension]]
+  > EOF
+
+  $ dune build
+  File "test.ml", line 1, characters 26-38:
+  1 | module type M = [%import: [%extension]]
+                                ^^^^^^^^^^^^
+  Error: package expected
+  [1]
+
+Pwith_module
+  $ cat >test.ml <<EOF
+  > module type StringHashable = sig
+  >   type t = string
+  >   val equal : t -> t -> bool
+  >   val hash : t -> int
+  > end
+  > 
+  > module StringHashable = struct
+  >   type t = string
+  >   let equal = (=)
+  >   let hash = Hashtbl.hash
+  > end
+  > 
+  > module type HashableWith = [%import: (module sig
+  >   include module type of StringHashable
+  > end with module StringHashable = StringHashable)]
+  > EOF
+
+  $ dune build
+  File "test.ml", lines 13-15, characters 45-47:
+  13 | .............................................sig
+  14 |   include module type of StringHashable
+  15 | end with module StringHashable = StringHashable..
+  Error: invalid package type: only module type identifier and 'with type' constraints are supported
+  [1]
+
+Pwith_modtype
+  $ cat >test.ml <<EOF
+  > module type StringHashable = sig
+  >   type t = string
+  >   val equal : t -> t -> bool
+  >   val hash : t -> int
+  > end
+  > 
+  > module StringHashable = struct
+  >   type t = string
+  >   let equal = (=)
+  >   let hash = Hashtbl.hash
+  > end
+  > 
+  > module type HashableWith = [%import: (module sig
+  >   include module type of StringHashable
+  > end with module type StringHashable = StringHashable)]
+  > EOF
+
+  $ dune build
+  File "test.ml", lines 13-15, characters 45-52:
+  13 | .............................................sig
+  14 |   include module type of StringHashable
+  15 | end with module type StringHashable = StringHashable..
+  Error: invalid package type: only module type identifier and 'with type' constraints are supported
+  [1]
+
+Pwith_typesubst
+  $ cat >test.ml <<EOF
+  > module type HashableWith = [%import: (module Hashtbl.HashedType with type t := string)]
+  > EOF
+
+  $ dune build
+  File "test.ml", line 1, characters 45-85:
+  1 | module type HashableWith = [%import: (module Hashtbl.HashedType with type t := string)]
+                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  Error: invalid package type: only 'with type t =' constraints are supported
+  [1]
+
+Pwith_modtypesubst
+  $ cat >test.ml <<EOF
+  > module type StringHashable = sig
+  >   type t = string
+  >   val equal : t -> t -> bool
+  >   val hash : t -> int
+  > end
+  > 
+  > module StringHashable = struct
+  >   type t = string
+  >   let equal = (=)
+  >   let hash = Hashtbl.hash
+  > end
+  > 
+  > module type HashableWith = [%import: (module sig
+  >   include module type of StringHashable
+  > end with module type StringHashable := StringHashable)]
+  > EOF
+
+  $ dune build
+  File "test.ml", lines 13-15, characters 45-53:
+  13 | .............................................sig
+  14 |   include module type of StringHashable
+  15 | end with module type StringHashable := StringHashable..
+  Error: invalid package type: only module type identifier and 'with type' constraints are supported
+  [1]
+
+Pwith_modsubst
+  $ cat >test.ml <<EOF
+  > module type StringHashable = sig
+  >   type t = string
+  >   val equal : t -> t -> bool
+  >   val hash : t -> int
+  > end
+  > 
+  > module StringHashable = struct
+  >   type t = string
+  >   let equal = (=)
+  >   let hash = Hashtbl.hash
+  > end
+  > 
+  > module type HashableWith = [%import: (module sig
+  >   include module type of StringHashable
+  > end with module StringHashable := StringHashable)]
+  > EOF
+
+  $ dune build
+  File "test.ml", lines 13-15, characters 45-48:
+  13 | .............................................sig
+  14 |   include module type of StringHashable
+  15 | end with module StringHashable := StringHashable..
+  Error: invalid package type: only module type identifier and 'with type' constraints are supported
+  [1]
