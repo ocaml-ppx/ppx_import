@@ -16,7 +16,7 @@ module MI = Stuff.MI
 
 [%%import: type i = Stuff.i]
 
-module type S_rec = [%import: (module Stuff.S_rec)]
+module type%import S_rec = Stuff.S_rec
 
 let test_constr _ctxt =
   ignore [A1; A2 "a"];
@@ -34,7 +34,7 @@ let test_constr _ctxt =
 let test_deriving _ctxt =
   assert_equal ~printer:(fun x -> x) "(Stuff.A2 \"a\")" (show_a' (A2 "a"))
 
-module type S_optional = [%import: (module Stuff.S_optional)]
+module type%import S_optional = Stuff.S_optional
 
 module Test_optional : S_optional = struct
   let f ?(opt = 0) () = ignore opt
@@ -52,10 +52,8 @@ type package_type =
     Longident.t := (Longident.t [@printer pp_longident])] )
 [@@deriving show]]
 
-module type Hashable = [%import: (module Hashtbl.HashedType)]
-
-module type HashableWith = [%import:
-(module Hashtbl.HashedType with type t = string)]
+module type%import Hashable = Hashtbl.HashedType
+module type%import HashableWith = Hashtbl.HashedType with type t = string
 
 module HashableWith : HashableWith = struct
   type t
@@ -70,7 +68,7 @@ let test_self_import _ctxt =
   let v : self_t = `OptionA in
   Test_self_import.validate_option v
 
-module type Self_S = [%import: (module Test_self_import.S)]
+module type%import Self_S = Test_self_import.S
 
 module Self_M : Self_S = struct
   let test () = "test"

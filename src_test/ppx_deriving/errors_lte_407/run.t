@@ -34,11 +34,13 @@ Abstract module error
   > EOF
 
   $ cat >test.ml <<EOF
-  > module type T = [%import: (module Stuff.T)]
+  > module type%import T = Stuff.T
   > EOF
 
   $ dune build
-  File "test.ml", line 1, characters 34-41:
+  File "test.ml", line 1, characters 23-30:
+  1 | module type%import T = Stuff.T
+                             ^^^^^^^
   Error: Imported module is abstract
   [1]
 
@@ -80,11 +82,13 @@ Cannot find module error
   > EOF
 
   $ cat >test.ml <<EOF
-  > module type A = [%import: (module Stuff.S.M)]
+  > module type%import A = Stuff.S.M
   > EOF
 
   $ dune build
-  File "test.ml", line 1, characters 34-43:
+  File "test.ml", line 1, characters 23-32:
+  1 | module type%import A = Stuff.S.M
+                             ^^^^^^^^^
   Error: [%import]: cannot find the module type M in Stuff.S
   [1]
 
@@ -108,55 +112,57 @@ Ptyp
   File "test.ml", line 1, characters 0-18:
   1 | [%%import: string]
       ^^^^^^^^^^^^^^^^^^
-  Error: PSig expected
+  Error: [%%import] Invalid extension usage. [%%import] only supports structure
+         items, signatures or type declarations, but a type pattern (PTyp) was
+         found.
   [1]
 
 Inline module type declaration
   $ cat >test.ml <<EOF
-  > module type Hashable = [%import: (module sig type t end)]
+  > module type%import Hashable = sig type t end
   > EOF
 
   $ dune build
-  File "test.ml", line 1, characters 41-55:
-  1 | module type Hashable = [%import: (module sig type t end)]
-                                               ^^^^^^^^^^^^^^
-  Error: invalid package type: only module type identifier and 'with type' constraints are supported
+  File "test.ml", line 1, characters 30-44:
+  1 | module type%import Hashable = sig type t end
+                                    ^^^^^^^^^^^^^^
+  Error: [%%import] inline module type declaration is not supported
   [1]
 
 Functor
   $ cat >test.ml <<EOF
-  > module type Foo = [%import: (module functor (M : sig end) -> sig end)]
+  > module type%import Foo = functor (M : sig end) -> sig end
   > EOF
 
   $ dune build
-  File "test.ml", line 1, characters 44-68:
-  1 | module type Foo = [%import: (module functor (M : sig end) -> sig end)]
-                                                  ^^^^^^^^^^^^^^^^^^^^^^^^
-  Error: invalid package type: only module type identifier and 'with type' constraints are supported
+  File "test.ml", line 1, characters 33-57:
+  1 | module type%import Foo = functor (M : sig end) -> sig end
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^
+  Error: [%%import] module type doesn't support functor
   [1]
 
 Module type of
   $ cat >test.ml <<EOF
-  > module type Example = [%import: (module type of A)]
+  > module type%import Example = module type of A
   > EOF
 
   $ dune build
-  File "test.ml", line 1, characters 40-44:
-  1 | module type Example = [%import: (module type of A)]
-                                              ^^^^
-  Error: Syntax error
+  File "test.ml", line 1, characters 29-45:
+  1 | module type%import Example = module type of A
+                                   ^^^^^^^^^^^^^^^^
+  Error: [%%import] module type doesn't support typeof
   [1]
 
 Pmty_extension
   $ cat >test.ml <<EOF
-  > module type M = [%import: [%extension]]
+  > module type%import M = [%extension]
   > EOF
 
   $ dune build
-  File "test.ml", line 1, characters 26-38:
-  1 | module type M = [%import: [%extension]]
-                                ^^^^^^^^^^^^
-  Error: package expected
+  File "test.ml", line 1, characters 23-35:
+  1 | module type%import M = [%extension]
+                             ^^^^^^^^^^^^
+  Error: [%%import] module type doesn't support extension
   [1]
 
 Pwith_module
@@ -173,17 +179,16 @@ Pwith_module
   >   let hash = Hashtbl.hash
   > end
   > 
-  > module type HashableWith = [%import: (module sig
+  > module type%import HashableWith = sig
   >   include module type of StringHashable
-  > end with module StringHashable = StringHashable)]
+  > end with module StringHashable = StringHashable
   > EOF
 
   $ dune build
-  File "test.ml", lines 13-15, characters 45-47:
-  13 | .............................................sig
-  14 |   include module type of StringHashable
-  15 | end with module StringHashable = StringHashable..
-  Error: invalid package type: only module type identifier and 'with type' constraints are supported
+  File "test.ml", line 15, characters 16-30:
+  15 | end with module StringHashable = StringHashable
+                       ^^^^^^^^^^^^^^
+  Error: [%%import]: Pwith_module constraint is not supported.
   [1]
 
 Pwith_modtype
@@ -200,29 +205,28 @@ Pwith_modtype
   >   let hash = Hashtbl.hash
   > end
   > 
-  > module type HashableWith = [%import: (module sig
+  > module type%import HashableWith = sig
   >   include module type of StringHashable
-  > end with module type StringHashable = StringHashable)]
+  > end with module type StringHashable = StringHashable
   > EOF
 
   $ dune build
-  File "test.ml", lines 13-15, characters 45-52:
-  13 | .............................................sig
-  14 |   include module type of StringHashable
-  15 | end with module type StringHashable = StringHashable..
-  Error: invalid package type: only module type identifier and 'with type' constraints are supported
+  File "test.ml", line 15, characters 21-35:
+  15 | end with module type StringHashable = StringHashable
+                            ^^^^^^^^^^^^^^
+  Error: [%%import]: Pwith_modtype constraint is not supported.
   [1]
 
 Pwith_typesubst
   $ cat >test.ml <<EOF
-  > module type HashableWith = [%import: (module Hashtbl.HashedType with type t := string)]
+  > module type%import HashableWith = Hashtbl.HashedType with type t := string
   > EOF
 
   $ dune build
-  File "test.ml", line 1, characters 45-85:
-  1 | module type HashableWith = [%import: (module Hashtbl.HashedType with type t := string)]
-                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  Error: invalid package type: only 'with type t =' constraints are supported
+  File "test.ml", line 1, characters 63-64:
+  1 | module type%import HashableWith = Hashtbl.HashedType with type t := string
+                                                                     ^
+  Error: [%%import]: Pwith_typesubst constraint is not supported.
   [1]
 
 Pwith_modtypesubst
@@ -239,17 +243,16 @@ Pwith_modtypesubst
   >   let hash = Hashtbl.hash
   > end
   > 
-  > module type HashableWith = [%import: (module sig
+  > module type%import HashableWith = sig
   >   include module type of StringHashable
-  > end with module type StringHashable := StringHashable)]
+  > end with module type StringHashable := StringHashable
   > EOF
 
   $ dune build
-  File "test.ml", lines 13-15, characters 45-53:
-  13 | .............................................sig
-  14 |   include module type of StringHashable
-  15 | end with module type StringHashable := StringHashable..
-  Error: invalid package type: only module type identifier and 'with type' constraints are supported
+  File "test.ml", line 15, characters 21-35:
+  15 | end with module type StringHashable := StringHashable
+                            ^^^^^^^^^^^^^^
+  Error: [%%import]: Pwith_modtypesubst constraint is not supported.
   [1]
 
 Pwith_modsubst
@@ -266,15 +269,14 @@ Pwith_modsubst
   >   let hash = Hashtbl.hash
   > end
   > 
-  > module type HashableWith = [%import: (module sig
+  > module type%import HashableWith = sig
   >   include module type of StringHashable
-  > end with module StringHashable := StringHashable)]
+  > end with module StringHashable := StringHashable
   > EOF
 
   $ dune build
-  File "test.ml", lines 13-15, characters 45-48:
-  13 | .............................................sig
-  14 |   include module type of StringHashable
-  15 | end with module StringHashable := StringHashable..
-  Error: invalid package type: only module type identifier and 'with type' constraints are supported
+  File "test.ml", line 15, characters 16-30:
+  15 | end with module StringHashable := StringHashable
+                       ^^^^^^^^^^^^^^
+  Error: [%%import]: Pwith_modsubst constraint is not supported.
   [1]
