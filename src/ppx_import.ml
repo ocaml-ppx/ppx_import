@@ -550,17 +550,8 @@ let module_type ~tool_name ~input_name (package_type : Ppxlib.package_type) =
             in
             Ast_helper.Mty.mk ~attrs:[] (Pmty_signature psig)
           | {mtd_type = None; _} ->
-            let ext =
-              Ppxlib.Location.error_extensionf ~loc
-                "Imported module is abstract"
-            in
-            Ast_builder.Default.pmty_extension ~loc ext
-          | _ ->
-            let ext =
-              Ppxlib.Location.error_extensionf ~loc
-                "Imported module is indirectly defined"
-            in
-            Ast_builder.Default.pmty_extension ~loc ext )
+            raise_error ~loc "Imported module is abstract"
+          | _ -> raise_error ~loc "Imported module is indirectly defined" )
   with Error {loc; error} ->
     let ext = Ppxlib.Location.error_extensionf ~loc "%s" error in
     Ast_builder.Default.pmty_extension ~loc ext
