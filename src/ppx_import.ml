@@ -572,7 +572,7 @@ let type_declaration_expand ~ctxt rec_flag type_decls =
   let type_decls =
     type_decls |> List.map (type_declaration ~tool_name ~input_name)
   in
-  Ppxlib.{pstr_desc = Pstr_type (rec_flag, type_decls); pstr_loc = loc}
+  Ppxlib.Ast_builder.Default.(pstr_type ~loc rec_flag type_decls)
 
 let type_declaration_expand_intf ~ctxt rec_flag type_decls =
   let loc = Ppxlib.Expansion_context.Extension.extension_point_loc ctxt in
@@ -581,7 +581,7 @@ let type_declaration_expand_intf ~ctxt rec_flag type_decls =
   let type_decls =
     type_decls |> List.map (type_declaration ~tool_name ~input_name)
   in
-  Ppxlib.{psig_desc = Psig_type (rec_flag, type_decls); psig_loc = loc}
+  Ppxlib.Ast_builder.Default.(psig_type ~loc rec_flag type_decls)
 
 let module_declaration_expand ~ctxt package_type =
   let tool_name = Ppxlib.Expansion_context.Extension.tool_name ctxt in
