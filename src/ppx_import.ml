@@ -615,7 +615,7 @@ let module_declaration_rule =
   Ppxlib.Context_free.Rule.extension module_declaration_extension
 
 let () =
-  Ppxlib.Driver.register_transformation
+  Ppxlib.Driver.V2.register_transformation
     ~rules:
       [ type_declaration_rule
       ; module_declaration_rule
