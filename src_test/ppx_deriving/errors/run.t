@@ -116,8 +116,7 @@ It's been fixed for later versions in https://github.com/ocaml/ocaml/pull/8541
   1 | [%%import:
   2 | type b = int
   3 | type a = string]
-  Error: [%%import] Expected exactly one item in the structure or signature,
-         but found multiple items
+  Error: [] expected
 
 Ptyp
   $ cat >test.ml <<EOF
@@ -128,8 +127,7 @@ Ptyp
   File "test.ml", line 1, characters 0-18:
   1 | [%%import: string]
       ^^^^^^^^^^^^^^^^^^
-  Error: [%%import] Type pattern (PTyp) is not supported, only type and module
-         type declarations are allowed
+  Error: PStr expected
   [1]
 
 Inline module type declaration

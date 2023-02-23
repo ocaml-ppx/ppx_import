@@ -536,9 +536,6 @@ let rec module_type ~tool_name ~input_name ?(subst = []) modtype =
     (* Ex: module type%import Hashable = sig ... end *)
     raise_error ~loc:pmty_loc
       "[%%import] inline module type declaration is not supported"
-  | Pmty_with (modtype, constraints) ->
-    let subst = constraints |> List.map subst_of_constraint in
-    module_type ~tool_name ~input_name ~subst modtype
   | Pmty_functor (_, _) ->
     raise_error ~loc:pmty_loc "[%%import] module type doesn't support functor"
   | Pmty_typeof _ ->
@@ -547,6 +544,9 @@ let rec module_type ~tool_name ~input_name ?(subst = []) modtype =
     raise_error ~loc:pmty_loc "[%%import] module type doesn't support extension"
   | Pmty_alias _ ->
     raise_error ~loc:pmty_loc "[%%import] module type doesn't support alias"
+  | Pmty_with (modtype, constraints) ->
+    let subst = constraints |> List.map subst_of_constraint in
+    module_type ~tool_name ~input_name ~subst modtype
   | Pmty_ident longident ->
     let {txt = lid; loc} = longident in
     if tool_name = "ocamldep" then
@@ -648,89 +648,68 @@ let module_declaration_expand_intf ~ctxt modtype_decl =
   in
   Ppxlib.{psig_desc = Psig_modtype md_decl; psig_loc = loc}
 
-let type_declaration_expander ~ctxt payload =
-  let return_error e =
-    let loc = Ppxlib.Expansion_context.Extension.extension_point_loc ctxt in
-    let ext = Ppxlib.Location.error_extensionf ~loc "%s" e in
-    Ppxlib.Ast_builder.Default.pstr_extension ext [] ~loc
-  in
+type extracted_payload =
+  | Type_decl of Ppxlib.rec_flag * Ppxlib.type_declaration list
+  | Module_type_decl of Ppxlib.module_type_declaration
+
+let type_extractor =
+  Ppxlib.Ast_pattern.(
+    pstr (pstr_type __ __ ^:: nil)
+    ||| psig (psig_type __ __ ^:: nil)
+    |> map2 ~f:(fun rec_flag type_decl -> Type_decl (rec_flag, type_decl)) )
+
+let module_type_extractor =
+  Ppxlib.Ast_pattern.(
+    psig (psig_modtype __ ^:: nil)
+    ||| pstr (pstr_modtype __ ^:: nil)
+    |> map1 ~f:(fun modtype -> Module_type_decl modtype) )
+
+let extractor = Ppxlib.Ast_pattern.(type_extractor ||| module_type_extractor)
+
+let expander ~ctxt payload =
   match payload with
-  | Parsetree.PStr [{pstr_desc = Pstr_type (rec_flag, type_decls); _}]
-   |Parsetree.PSig [{psig_desc = Psig_type (rec_flag, type_decls); _}] ->
+  | Type_decl (rec_flag, type_decls) ->
     type_declaration_expand ~ctxt rec_flag type_decls
-  | Parsetree.PStr [{pstr_desc = Pstr_modtype modtype_decl; _}]
-   |Parsetree.PSig [{psig_desc = Psig_modtype modtype_decl; _}] ->
+  | Module_type_decl modtype_decl ->
     module_declaration_expand ~ctxt modtype_decl
-  | Parsetree.PStr [{pstr_desc = _; _}] | Parsetree.PSig [{psig_desc = _; _}] ->
-    return_error
-      "[%%import] Expected a type declaration or a module type declaration"
-  | Parsetree.PStr (_ :: _) | Parsetree.PSig (_ :: _) ->
-    return_error
-      "[%%import] Expected exactly one item in the structure or signature, but \
-       found multiple items"
-  | Parsetree.PStr [] | Parsetree.PSig [] ->
-    return_error
-      "[%%import] Expected exactly one item in the structure or signature, but \
-       found none"
-  | Parsetree.PTyp _ ->
-    return_error
-      "[%%import] Type pattern (PTyp) is not supported, only type and module \
-       type declarations are allowed"
-  | Parsetree.PPat (_, _) ->
-    return_error
-      "[%%import] Pattern (PPat) is not supported, only type and module type \
-       declarations are allowed"
 
-let type_declaration_extension =
+let import_extension =
   Ppxlib.Extension.V3.declare "import" Ppxlib.Extension.Context.structure_item
-    Ppxlib.Ast_pattern.(__)
-    type_declaration_expander
+    extractor expander
 
-let type_declaration_expander_intf ~ctxt payload =
-  let return_error e =
-    let loc = Ppxlib.Expansion_context.Extension.extension_point_loc ctxt in
-    let ext = Ppxlib.Location.error_extensionf ~loc "%s" e in
-    Ppxlib.Ast_builder.Default.psig_extension ext [] ~loc
-  in
+let import_declaration_rule =
+  Ppxlib.Context_free.Rule.extension import_extension
+
+let type_extractor_intf =
+  Ppxlib.Ast_pattern.(
+    pstr (pstr_type __ __ ^:: nil)
+    ||| psig (psig_type __ __ ^:: nil)
+    |> map2 ~f:(fun rec_flag type_decl -> Type_decl (rec_flag, type_decl)) )
+
+let module_type_extractor_intf =
+  Ppxlib.Ast_pattern.(
+    psig (psig_modtype __ ^:: nil)
+    ||| pstr (pstr_modtype __ ^:: nil)
+    |> map1 ~f:(fun modtype -> Module_type_decl modtype) )
+
+let extractor_intf =
+  Ppxlib.Ast_pattern.(type_extractor_intf ||| module_type_extractor_intf)
+
+let expander_intf ~ctxt payload =
   match payload with
-  | Parsetree.PStr [{pstr_desc = Pstr_type (rec_flag, type_decls); _}]
-   |Parsetree.PSig [{psig_desc = Psig_type (rec_flag, type_decls); _}] ->
+  | Type_decl (rec_flag, type_decls) ->
     type_declaration_expand_intf ~ctxt rec_flag type_decls
-  | Parsetree.PStr [{pstr_desc = Pstr_modtype modtype_decl; _}]
-   |Parsetree.PSig [{psig_desc = Psig_modtype modtype_decl; _}] ->
+  | Module_type_decl modtype_decl ->
     module_declaration_expand_intf ~ctxt modtype_decl
-  | Parsetree.PStr [{pstr_desc = _; _}] | Parsetree.PSig [{psig_desc = _; _}] ->
-    return_error
-      "[%%import] Expected a type declaration or a module type declaration"
-  | Parsetree.PStr (_ :: _) | Parsetree.PSig (_ :: _) ->
-    return_error
-      "[%%import] Expected exactly one item in the structure or signature, but \
-       found multiple items"
-  | Parsetree.PStr [] | Parsetree.PSig [] ->
-    return_error
-      "[%%import] Expected exactly one item in the structure or signature, but \
-       found none"
-  | Parsetree.PTyp _ ->
-    return_error
-      "[%%import] Type pattern (PTyp) is not supported, only type and module \
-       type declarations are allowed"
-  | Parsetree.PPat (_, _) ->
-    return_error
-      "[%%import] Pattern (PPat) is not supported, only type and module type \
-       declarations are allowed"
 
-let type_declaration_extension_intf =
+let import_extension_intf =
   Ppxlib.Extension.V3.declare "import" Ppxlib.Extension.Context.signature_item
-    Ppxlib.Ast_pattern.(__)
-    type_declaration_expander_intf
+    extractor_intf expander_intf
 
-let type_declaration_rule =
-  Ppxlib.Context_free.Rule.extension type_declaration_extension
-
-let type_declaration_rule_intf =
-  Ppxlib.Context_free.Rule.extension type_declaration_extension_intf
+let import_declaration_rule_intf =
+  Ppxlib.Context_free.Rule.extension import_extension_intf
 
 let () =
   Ppxlib.Driver.V2.register_transformation
-    ~rules:[type_declaration_rule; type_declaration_rule_intf]
+    ~rules:[import_declaration_rule; import_declaration_rule_intf]
     "ppx_import"

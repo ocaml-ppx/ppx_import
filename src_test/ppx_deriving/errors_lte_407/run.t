@@ -39,8 +39,6 @@ Abstract module error
 
   $ dune build
   File "test.ml", line 1, characters 23-30:
-  1 | module type%import T = Stuff.T
-                             ^^^^^^^
   Error: Imported module is abstract
   [1]
 
@@ -87,8 +85,6 @@ Cannot find module error
 
   $ dune build
   File "test.ml", line 1, characters 23-32:
-  1 | module type%import A = Stuff.S.M
-                             ^^^^^^^^^
   Error: [%import]: cannot find the module type M in Stuff.S
   [1]
 
@@ -110,11 +106,7 @@ Ptyp
 
   $ dune build
   File "test.ml", line 1, characters 0-18:
-  1 | [%%import: string]
-      ^^^^^^^^^^^^^^^^^^
-  Error: [%%import] Invalid extension usage. [%%import] only supports structure
-         items, signatures or type declarations, but a type pattern (PTyp) was
-         found.
+  Error: PStr expected
   [1]
 
 Inline module type declaration
@@ -124,8 +116,6 @@ Inline module type declaration
 
   $ dune build
   File "test.ml", line 1, characters 30-44:
-  1 | module type%import Hashable = sig type t end
-                                    ^^^^^^^^^^^^^^
   Error: [%%import] inline module type declaration is not supported
   [1]
 
@@ -135,9 +125,7 @@ Functor
   > EOF
 
   $ dune build
-  File "test.ml", line 1, characters 33-57:
-  1 | module type%import Foo = functor (M : sig end) -> sig end
-                                       ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "test.ml", line 1, characters 25-57:
   Error: [%%import] module type doesn't support functor
   [1]
 
@@ -148,8 +136,6 @@ Module type of
 
   $ dune build
   File "test.ml", line 1, characters 29-45:
-  1 | module type%import Example = module type of A
-                                   ^^^^^^^^^^^^^^^^
   Error: [%%import] module type doesn't support typeof
   [1]
 
@@ -160,8 +146,6 @@ Pmty_extension
 
   $ dune build
   File "test.ml", line 1, characters 23-35:
-  1 | module type%import M = [%extension]
-                             ^^^^^^^^^^^^
   Error: [%%import] module type doesn't support extension
   [1]
 
@@ -186,8 +170,6 @@ Pwith_module
 
   $ dune build
   File "test.ml", line 15, characters 16-30:
-  15 | end with module StringHashable = StringHashable
-                       ^^^^^^^^^^^^^^
   Error: [%%import]: Pwith_module constraint is not supported.
   [1]
 
@@ -211,10 +193,8 @@ Pwith_modtype
   > EOF
 
   $ dune build
-  File "test.ml", line 15, characters 21-35:
-  15 | end with module type StringHashable = StringHashable
-                            ^^^^^^^^^^^^^^
-  Error: [%%import]: Pwith_modtype constraint is not supported.
+  File "test.ml", line 15, characters 16-20:
+  Error: Syntax error
   [1]
 
 Pwith_typesubst
@@ -224,8 +204,6 @@ Pwith_typesubst
 
   $ dune build
   File "test.ml", line 1, characters 63-64:
-  1 | module type%import HashableWith = Hashtbl.HashedType with type t := string
-                                                                     ^
   Error: [%%import]: Pwith_typesubst constraint is not supported.
   [1]
 
@@ -249,10 +227,8 @@ Pwith_modtypesubst
   > EOF
 
   $ dune build
-  File "test.ml", line 15, characters 21-35:
-  15 | end with module type StringHashable := StringHashable
-                            ^^^^^^^^^^^^^^
-  Error: [%%import]: Pwith_modtypesubst constraint is not supported.
+  File "test.ml", line 15, characters 16-20:
+  Error: Syntax error
   [1]
 
 Pwith_modsubst
@@ -276,7 +252,5 @@ Pwith_modsubst
 
   $ dune build
   File "test.ml", line 15, characters 16-30:
-  15 | end with module StringHashable := StringHashable
-                       ^^^^^^^^^^^^^^
   Error: [%%import]: Pwith_modsubst constraint is not supported.
   [1]
