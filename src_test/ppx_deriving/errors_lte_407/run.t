@@ -87,3 +87,14 @@ Cannot find module error
   File "test.ml", line 1, characters 34-43:
   Error: [%import]: cannot find the module type M in Stuff.S
   [1]
+
+Multiple signature items
+  $ cat >test.ml <<EOF
+  > [%%import:
+  > type b = int
+  > type a = string]
+  > EOF
+  $ dune build
+  File "test.ml", line 1, characters 0-40:
+  Error: [] expected
+  [1]
