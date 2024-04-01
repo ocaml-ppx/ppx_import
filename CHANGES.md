@@ -14,6 +14,8 @@ Unreleased
   type%import loc = Location.t
   ```
 
+  * Support for OCaml 5.2 (#94, @kit-ty-kate)
+
 1.10.0
 ------
 
