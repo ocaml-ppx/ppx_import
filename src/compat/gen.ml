@@ -14,7 +14,7 @@ let make_version ~version f_prefix =
 let include_table =
   [ ("types_module_type", [(4, 10); (4, 8)])
   ; ("types_signature_item", [(4, 8)])
-  ; ("types_type_kind", [(4, 13)])
+  ; ("types_type_kind", [(5, 2); (4, 13)])
   ; ("init_path", [(4, 9)])
   ; ("env_lookup", [(4, 10)])
   ; ("types_desc", [(4, 14)]) ]
