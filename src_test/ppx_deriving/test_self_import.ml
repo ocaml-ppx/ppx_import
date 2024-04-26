@@ -1,6 +1,6 @@
 [%%import: type t = Test_self_import.t]
 
-module type S = [%import: (module Test_self_import.S)]
+module type%import S = Test_self_import.S
 
 let validate_option = function
   | `OptionA -> assert true

@@ -508,17 +508,54 @@ let rec psig_of_tsig ~subst (tsig : Compat.signature_item_407 list) :
   | [] -> []
   | _ -> assert false
 
-let module_type ~tool_name ~input_name (package_type : Ppxlib.package_type) =
+let subst_of_constraint (const : Ppxlib.with_constraint) =
   let open Ppxlib in
-  try
-    let ({txt = lid; loc} as alias), subst = package_type in
+  match const with
+  | Parsetree.Pwith_type (longident, type_decl) -> (
+    match type_decl with
+    | {ptype_manifest = Some core_type; _} -> (longident, core_type)
+    | {ptype_loc; _} ->
+      raise_error ~loc:ptype_loc "[%%import]: Not supported type_decl" )
+  | Parsetree.Pwith_module ({loc; _}, _) ->
+    raise_error ~loc "[%%import]: Pwith_module constraint is not supported."
+  | Parsetree.Pwith_modtype ({loc; _}, _) ->
+    raise_error ~loc "[%%import]: Pwith_modtype constraint is not supported."
+  | Parsetree.Pwith_modtypesubst ({loc; _}, _) ->
+    raise_error ~loc
+      "[%%import]: Pwith_modtypesubst constraint is not supported."
+  | Parsetree.Pwith_typesubst ({loc; _}, _) ->
+    raise_error ~loc "[%%import]: Pwith_typesubst constraint is not supported."
+  | Parsetree.Pwith_modsubst ({loc; _}, _) ->
+    raise_error ~loc "[%%import]: Pwith_modsubst constraint is not supported."
+
+let rec module_type ~tool_name ~input_name ?(subst = []) modtype =
+  let open Ppxlib in
+  let {pmty_desc; pmty_loc; _} = modtype in
+  match pmty_desc with
+  | Pmty_signature _ ->
+    (* Ex: module type%import Hashable = sig ... end *)
+    raise_error ~loc:pmty_loc
+      "[%%import] inline module type declaration is not supported"
+  | Pmty_functor (_, _) ->
+    raise_error ~loc:pmty_loc "[%%import] module type doesn't support functor"
+  | Pmty_typeof _ ->
+    raise_error ~loc:pmty_loc "[%%import] module type doesn't support typeof"
+  | Pmty_extension _ ->
+    raise_error ~loc:pmty_loc "[%%import] module type doesn't support extension"
+  | Pmty_alias _ ->
+    raise_error ~loc:pmty_loc "[%%import] module type doesn't support alias"
+  | Pmty_with (modtype, constraints) ->
+    let subst = constraints |> List.map subst_of_constraint in
+    module_type ~tool_name ~input_name ~subst modtype
+  | Pmty_ident longident ->
+    let {txt = lid; loc} = longident in
     if tool_name = "ocamldep" then
       if is_self_reference ~input_name ~loc lid then
         (* Create a dummy module type to break the circular dependency *)
         Ast_helper.Mty.mk ~attrs:[] (Pmty_signature [])
       else
         (* Just put it as alias *)
-        Ast_helper.Mty.mk ~attrs:[] (Pmty_alias alias)
+        Ast_helper.Mty.mk ~attrs:[] (Pmty_alias longident)
     else
       Ppxlib.Ast_helper.with_default_loc loc (fun () ->
           let env = Lazy.force lazy_env in
@@ -552,6 +589,19 @@ let module_type ~tool_name ~input_name (package_type : Ppxlib.package_type) =
           | {mtd_type = None; _} ->
             raise_error ~loc "Imported module is abstract"
           | _ -> raise_error ~loc "Imported module is indirectly defined" )
+
+let module_type_decl ~tool_name ~input_name
+    (modtype_decl : Ppxlib.module_type_declaration) =
+  let open Ppxlib in
+  try
+    let {pmtd_type; pmtd_loc; _} = modtype_decl in
+    match pmtd_type with
+    | None ->
+      (* when there's nothing after the equal sign. Ex: module type%import Hashable *)
+      raise_error ~loc:pmtd_loc
+        "[%%import] module type declaration is missing the module type \
+         definition"
+    | Some modtype -> module_type ~tool_name ~input_name modtype
   with Error {loc; error} ->
     let ext = Ppxlib.Location.error_extensionf ~loc "%s" error in
     Ast_builder.Default.pmty_extension ~loc ext
@@ -574,41 +624,92 @@ let type_declaration_expand_intf ~ctxt rec_flag type_decls =
   in
   Ppxlib.Ast_builder.Default.(psig_type ~loc rec_flag type_decls)
 
-let module_declaration_expand ~ctxt package_type =
+let module_declaration_expand ~ctxt modtype_decl =
+  let loc = Ppxlib.Expansion_context.Extension.extension_point_loc ctxt in
   let tool_name = Ppxlib.Expansion_context.Extension.tool_name ctxt in
   let input_name = Ppxlib.Expansion_context.Extension.input_name ctxt in
-  module_type ~tool_name ~input_name package_type
+  let modtype = module_type_decl ~tool_name ~input_name modtype_decl in
+  let Ppxlib.{pmtd_name; pmtd_attributes; pmtd_loc; _} = modtype_decl in
+  let md_decl =
+    Ppxlib.Ast_helper.Mtd.mk ~loc:pmtd_loc ~attrs:pmtd_attributes pmtd_name
+      ~typ:modtype
+  in
+  Ppxlib.{pstr_desc = Pstr_modtype md_decl; pstr_loc = loc}
 
-let type_declaration_extension =
+let module_declaration_expand_intf ~ctxt modtype_decl =
+  let loc = Ppxlib.Expansion_context.Extension.extension_point_loc ctxt in
+  let tool_name = Ppxlib.Expansion_context.Extension.tool_name ctxt in
+  let input_name = Ppxlib.Expansion_context.Extension.input_name ctxt in
+  let modtype = module_type_decl ~tool_name ~input_name modtype_decl in
+  let Ppxlib.{pmtd_name; pmtd_attributes; pmtd_loc; _} = modtype_decl in
+  let md_decl =
+    Ppxlib.Ast_helper.Mtd.mk ~loc:pmtd_loc ~attrs:pmtd_attributes pmtd_name
+      ~typ:modtype
+  in
+  Ppxlib.{psig_desc = Psig_modtype md_decl; psig_loc = loc}
+
+type extracted_payload =
+  | Type_decl of Ppxlib.rec_flag * Ppxlib.type_declaration list
+  | Module_type_decl of Ppxlib.module_type_declaration
+
+let type_extractor =
+  Ppxlib.Ast_pattern.(
+    pstr (pstr_type __ __ ^:: nil)
+    ||| psig (psig_type __ __ ^:: nil)
+    |> map2 ~f:(fun rec_flag type_decl -> Type_decl (rec_flag, type_decl)) )
+
+let module_type_extractor =
+  Ppxlib.Ast_pattern.(
+    psig (psig_modtype __ ^:: nil)
+    ||| pstr (pstr_modtype __ ^:: nil)
+    |> map1 ~f:(fun modtype -> Module_type_decl modtype) )
+
+let extractor = Ppxlib.Ast_pattern.(type_extractor ||| module_type_extractor)
+
+let expander ~ctxt payload =
+  match payload with
+  | Type_decl (rec_flag, type_decls) ->
+    type_declaration_expand ~ctxt rec_flag type_decls
+  | Module_type_decl modtype_decl ->
+    module_declaration_expand ~ctxt modtype_decl
+
+let import_extension =
   Ppxlib.Extension.V3.declare "import" Ppxlib.Extension.Context.structure_item
-    Ppxlib.Ast_pattern.(
-      psig (psig_type __ __ ^:: nil) ||| pstr (pstr_type __ __ ^:: nil) )
-    type_declaration_expand
+    extractor expander
 
-let type_declaration_extension_intf =
+let import_declaration_rule =
+  Ppxlib.Context_free.Rule.extension import_extension
+
+let type_extractor_intf =
+  Ppxlib.Ast_pattern.(
+    pstr (pstr_type __ __ ^:: nil)
+    ||| psig (psig_type __ __ ^:: nil)
+    |> map2 ~f:(fun rec_flag type_decl -> Type_decl (rec_flag, type_decl)) )
+
+let module_type_extractor_intf =
+  Ppxlib.Ast_pattern.(
+    psig (psig_modtype __ ^:: nil)
+    ||| pstr (pstr_modtype __ ^:: nil)
+    |> map1 ~f:(fun modtype -> Module_type_decl modtype) )
+
+let extractor_intf =
+  Ppxlib.Ast_pattern.(type_extractor_intf ||| module_type_extractor_intf)
+
+let expander_intf ~ctxt payload =
+  match payload with
+  | Type_decl (rec_flag, type_decls) ->
+    type_declaration_expand_intf ~ctxt rec_flag type_decls
+  | Module_type_decl modtype_decl ->
+    module_declaration_expand_intf ~ctxt modtype_decl
+
+let import_extension_intf =
   Ppxlib.Extension.V3.declare "import" Ppxlib.Extension.Context.signature_item
-    Ppxlib.Ast_pattern.(
-      psig (psig_type __ __ ^:: nil) ||| pstr (pstr_type __ __ ^:: nil) )
-    type_declaration_expand_intf
+    extractor_intf expander_intf
 
-let module_declaration_extension =
-  Ppxlib.Extension.V3.declare "import" Ppxlib.Extension.Context.module_type
-    Ppxlib.Ast_pattern.(ptyp (ptyp_package __))
-    module_declaration_expand
-
-let type_declaration_rule =
-  Ppxlib.Context_free.Rule.extension type_declaration_extension
-
-let type_declaration_rule_intf =
-  Ppxlib.Context_free.Rule.extension type_declaration_extension_intf
-
-let module_declaration_rule =
-  Ppxlib.Context_free.Rule.extension module_declaration_extension
+let import_declaration_rule_intf =
+  Ppxlib.Context_free.Rule.extension import_extension_intf
 
 let () =
   Ppxlib.Driver.V2.register_transformation
-    ~rules:
-      [ type_declaration_rule
-      ; module_declaration_rule
-      ; type_declaration_rule_intf ]
+    ~rules:[import_declaration_rule; import_declaration_rule_intf]
     "ppx_import"
