@@ -1,3 +1,9 @@
+1.11.0
+------
+
+  * Support for OCaml 5.2 (#94, @kit-ty-kate, backport to 1.x by
+    @ejgallego #97)
+
 1.10.0
 ------
 

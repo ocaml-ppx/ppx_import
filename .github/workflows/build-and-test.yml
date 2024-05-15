@@ -2,9 +2,9 @@ name: Build and Test
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, v1.x ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, v1.x ]
 
 jobs:
   build:
@@ -26,6 +26,9 @@ jobs:
           - 4.12.x
           - 4.13.x
           - 4.14.x
+          - 5.0.x
+          - 5.1.x
+          - 5.2.x
 
     runs-on: ${{ matrix.os }}
 
