@@ -101,3 +101,19 @@ Cannot find module error
                                         ^^^^^^^^^
   Error: [%import]: cannot find the module type M in Stuff.S
   [1]
+
+Multiple signature items
+  $ cat >test.ml <<EOF
+  > [%%import:
+  > type b = int
+  > type a = string]
+  > EOF
+
+OCaml 4.08 reports different numbers. 
+It's been fixed for later versions in https://github.com/ocaml/ocaml/pull/8541
+  $ dune build 2>&1 | sed -r 's/(line|character)s? [0-9]+(-[0-9]+)?/\1s %NUMBER%/g'
+  File "test.ml", lines %NUMBER%, characters %NUMBER%:
+  1 | [%%import:
+  2 | type b = int
+  3 | type a = string]
+  Error: [] expected
