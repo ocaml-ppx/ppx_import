@@ -19,7 +19,7 @@ In order to use _import_, require the package `ppx_import`.
 
 #### Using `ppx_import` from Dune
 
-To use `ppx_import` from Dune you should use the [`staged_pps`](https://dune.readthedocs.io/en/latest/dune-files.html#preprocessing-specification) field to declare the preprocessing specification. Example:
+To use `ppx_import` from Dune you should use the [`staged_pps`](https://dune.readthedocs.io/en/latest/reference/preprocessing-spec.html) field to declare the preprocessing specification. Example:
 
 ```
 (library
