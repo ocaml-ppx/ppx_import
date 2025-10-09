@@ -38,6 +38,12 @@ module Test_optional : S_optional = struct
   let f ?(opt = 0) () = ignore opt
 end
 
+module Location = struct
+  type t = Location.t
+  let pp = Location.print_loc
+  type 'a loc = [%import: 'a Location.loc] [@@deriving show]
+end
+
 type longident = [%import: Longident.t] [@@deriving show]
 
 type package_type =
@@ -47,7 +53,8 @@ type package_type =
       core_type := (Parsetree.core_type [@printer Pprintast.core_type]);
       Asttypes.loc :=
         (Asttypes.loc [@polyprinter fun pp fmt x -> pp fmt x.Asttypes.txt]);
-      Longident.t := (Longident.t [@printer pp_longident])] )]
+      Longident.t := (Longident.t [@printer pp_longident]);
+      attributes := (Parsetree.attributes [@printer (fun _ _ -> ())])])]
 [@@deriving show]
 
 module type Hashable = [%import: (module Hashtbl.HashedType)]

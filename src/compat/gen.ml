@@ -17,7 +17,10 @@ let include_table =
   ; ("types_type_kind", [(5, 2); (4, 13)])
   ; ("init_path", [(4, 9)])
   ; ("env_lookup", [(4, 10)])
-  ; ("types_desc", [(4, 14)]) ]
+  ; ("types_desc", [(4, 14)])
+  ; ("tuple", [5,4])
+  ; ("longident", [5,4])
+  ]
 
 let rec gen_compat real_version (f_prefix, version_list) =
   match version_list with
