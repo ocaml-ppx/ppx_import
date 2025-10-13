@@ -2,6 +2,7 @@
 ------
 
   * Support for OCaml 5.4 (#100, @octachron, backport #104, @egallego)
+  * Support for OCaml 4.5, 4.6, and 4.7 has been removed (#104, @egallego)
 
 1.11.0
 ------
