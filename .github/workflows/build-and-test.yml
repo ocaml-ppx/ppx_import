@@ -11,10 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          # - macos-latest
-          # - windows-latest
+        os: [ubuntu-latest]
         ocaml-compiler:
           - 4.05.x
           - 4.06.x
@@ -29,21 +26,28 @@ jobs:
           - 5.0.x
           - 5.1.x
           - 5.2.x
+          - 5.3.x
+          - 5.4.x
+        include:
+          - os: macos-latest
+            ocaml-compiler: 4.14.x
+          - os: macos-latest
+            ocaml-compiler: 5.4.x
+          - os: windows-latest
+            ocaml-compiler: 4.14.x
+          - os: windows-latest
+            ocaml-compiler: 5.4.x
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v5
 
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
-        uses: ocaml/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
-          dune-cache: ${{ matrix.os != 'macos-latest' }}
-          opam-repositories: |
-            default: https://github.com/ocaml/opam-repository.git
-            beta: https://github.com/ocaml/ocaml-beta-repository.git
 
       - name: Install opam packages
         run: opam install . --deps-only --yes --with-test
