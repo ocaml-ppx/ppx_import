@@ -1,8 +1,13 @@
+1.12.0
+------
+
+  * Support for OCaml 5.4 (#100, @octachron, backport #104, @egallego)
+  * Support for OCaml 4.5, 4.6, and 4.7 has been removed (#104, @egallego)
+
 1.11.0
 ------
 
-  * Support for OCaml 5.2 (#94, @kit-ty-kate, backport to 1.x by
-    @ejgallego #97)
+  * Support for OCaml 5.2 (#94, @kit-ty-kate)
 
 1.10.0
 ------

@@ -27,14 +27,17 @@ let lazy_env =
       Compat.init_path ();
       Ocaml_common.Compmisc.initial_env () )
 
-let string_of_lid lid =
-  let rec print lid acc =
-    match lid with
-    | Longident.Lident s -> s :: acc
-    | Longident.Ldot (lid, id) -> print lid ("." :: id :: acc)
-    | Longident.Lapply (la, lb) -> print la ("(" :: print lb (")" :: acc))
-  in
-  String.concat "" (print lid [])
+let string_of_lid' lid = Format.asprintf "%a" Pprintast.longident lid
+let string_of_lid lid = Format.asprintf "%a" Astlib.Pprintast.longident lid
+
+(* Remove locations *)
+let rec longident_without_loc =
+  let proj x = Compat.longident_proj x in
+  let conv x = longident_without_loc (proj x) in
+  function
+  | Longident.Ldot (x,y) -> Astlib.Longident.Ldot (conv x, proj y)
+  | Longident.Lapply (f,x) ->  Astlib.Longident.Lapply (conv f, conv x)
+  | Longident.Lident x -> Astlib.Longident.Lident x
 
 let try_find_module ~loc env lid =
   (* Note: we are careful to call `Env.lookup_module` and not
@@ -68,7 +71,7 @@ let try_find_module_type ~loc env lid =
       | None ->
         Location.raise_errorf ~loc
           "[%%import]: cannot access the signature of the abstract module %s"
-          (string_of_lid lid)
+          (string_of_lid' lid)
       | Some module_type -> module_type )
   with Not_found -> None
 
@@ -93,12 +96,16 @@ let open_module_type ~loc env lid module_type =
 let locate_sig ~loc env lid =
   let head, path =
     match Ppxlib.Longident.flatten_exn lid with
-    | head :: path -> (Longident.Lident head, path)
+    | head :: path -> (head, path)
     | _ -> assert false
+    | exception Invalid_argument _ ->
+      Location.raise_errorf ~loc
+        "[%%import] cannot import a functor application %s"
+          (string_of_lid lid)
   in
+  let chead = Longident.Lident head in
   let head_module_type =
-    match
-      (try_find_module ~loc env head, lazy (try_find_module_type ~loc env head))
+    match (try_find_module ~loc env chead, lazy (try_find_module_type ~loc env chead))
     with
     | Some mty, _ -> mty
     | None, (lazy (Some mty)) -> mty
@@ -124,10 +131,10 @@ let locate_sig ~loc env lid =
     let sub_module_type =
       loop (List.map Compat.migrate_signature_item sig_items)
     in
-    (Longident.Ldot (lid, path_item), sub_module_type)
+    (Astlib.Longident.Ldot(lid,path_item), sub_module_type)
   in
   let _lid, sub_module_type =
-    List.fold_left get_sub_module_type (head, head_module_type) path
+    List.fold_left get_sub_module_type (Astlib.Longident.Lident head, head_module_type) path
   in
   open_module_type ~loc env lid sub_module_type
 
@@ -164,7 +171,7 @@ let get_modtype_decl ~loc sig_items parent_lid elem =
       elem (string_of_lid parent_lid)
   | Some decl -> decl
 
-let longident_of_path = Untypeast.lident_of_path
+let longident_of_path x = longident_without_loc (Untypeast.lident_of_path x)
 
 let mknoloc (txt : 'a) : 'a Ppxlib.Location.loc =
   {txt; loc = Ppxlib.Location.none}
@@ -187,8 +194,7 @@ let rec core_type_of_type_expr ~subst (type_expr : Ocaml_common.Types.type_expr)
       | _ -> lhs
     in
     Ppxlib.Ast_helper.Typ.arrow label lhs (core_type_of_type_expr ~subst rhs)
-  | Ttuple xs ->
-    Ppxlib.Ast_helper.Typ.tuple (List.map (core_type_of_type_expr ~subst) xs)
+  | Ttuple xs -> Compat.tuple (core_type_of_type_expr ~subst) xs
   | Tconstr (path, args, _) -> (
     let lid = longident_of_path path in
     let args = List.map (core_type_of_type_expr ~subst) args in
@@ -387,11 +393,11 @@ let type_declaration ~tool_name ~input_name (type_decl : Ppxlib.type_declaration
                 Location.raise_errorf ~loc
                   "[%%import] cannot import a functor application %s"
                   (string_of_lid lid)
-              | Lident _ as head_id ->
+              | Lident hid ->
                 (* In this case, we know for sure that the user intends this lident
                    as a type name, so we use Typetexp.find_type and let the failure
                    cases propagate to the user. *)
-                Compat.find_type env ~loc head_id |> snd
+                Compat.find_type env ~loc (Lident hid) |> snd
               | Ldot (parent_id, elem) ->
                 let sig_items = locate_sig ~loc env parent_id in
                 get_type_decl ~loc sig_items parent_id elem
@@ -484,11 +490,11 @@ let module_type ~tool_name ~input_name (package_type : Ppxlib.package_type) =
             Location.raise_errorf ~loc
               "[%%import] cannot import a functor application %s"
               (string_of_lid lid)
-          | Longident.Lident _ as head_id ->
+          | Longident.Lident head_id ->
             (* In this case, we know for sure that the user intends this lident
                as a module type name, so we use Typetexp.find_type and
                let the failure cases propagate to the user. *)
-            Compat.find_modtype env ~loc head_id |> snd
+            Compat.find_modtype env ~loc (Lident head_id) |> snd
           | Longident.Ldot (parent_id, elem) ->
             let sig_items = locate_sig ~loc env parent_id in
             get_modtype_decl ~loc sig_items parent_id elem
